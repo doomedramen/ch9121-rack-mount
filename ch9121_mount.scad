@@ -50,7 +50,13 @@ pcb_hole_dz   = 2.7;    // back from the PCB front edge                VERIFY
 // for M3. Default here is M2.5. If yours measure >=3.3mm, switch to M3 (4.2).
 pcb_insert_d      = 3.6;   // M2.5 heat-set insert bore (M3 = 4.2)     VERIFY
 pcb_insert_depth  = 4.0;   // insert length + a little
-pcb_boss_pad      = 1.6;   // material around the insert bore
+
+// Inner edge of the two support ribs. The board rests on these, so they must
+// stay clear of everything hanging off the UNDERSIDE of the magjack - its two
+// heat-staked pegs (roughly +/-6.5 on the photos) and the RJ45 solder tails.
+// The magjack shell is 16mm wide, so 8.0 is the shell edge and about the
+// tightest this can go without also having to clear the bore.       VERIFY
+rib_inner_x = 8.0;
 
 // ---------------------------------------------------------------------------
 // 2. RACK FASCIA HAND-CUT OPENING (reference only, you cut this by hand)
@@ -73,7 +79,10 @@ rj45_y_trim    = 0;     // nudge the opening up/down if the magjack does not
 floor_t      = 2.5;   // tray floor thickness (also the insert boss root)
 wall_t       = 2.0;   // side wall thickness
 side_clear   = 0.3;   // per-side lateral clearance around the PCB
-side_wall_h  = 7.0;   // wall height above the floor's top face
+side_wall_h  = 6.0;   // wall height above the floor's top face
+                       // (kept low: it only has to locate the board sideways,
+                       //  the screws do the holding, and a tall wall crowds
+                       //  the dupont housings)
 standoff_h   = 3.0;   // PCB underside height above the floor top face
                        // (must clear underside_clear)
 // The side walls stop short of the rear so nothing crowds the dupont housings
@@ -128,10 +137,18 @@ assert(flange_insert_depth + 0.8 <= front_t + flange_boss_h,
 assert(flange_y0 <= rj45_cy - carrier_rj45_h/2 - 1.5 &&
        flange_y0 + flange_h >= rj45_cy + carrier_rj45_h/2 + 1.5,
        "flange is too short in Y to surround the RJ45 opening");
+assert(rj45_cy - flange_boss_w/2 >= side_wall_h + 0.5,
+       "flange insert boss nearly touches the tray side wall - leaves a sliver gap");
 assert(flange_y0 <= tray_bot_y,
        "flange does not reach down far enough to back up the tray floor");
-assert(pcb_hole_dx + pcb_insert_d/2 + pcb_boss_pad <= cavity_w/2 + wall_t,
-       "PCB insert boss would stick out past the tray side wall");
+assert(cavity_w/2 + wall_t + 2.0 <= flange_w/2,
+       "gusset fins would stick out past the flange edge");
+assert(pcb_hole_dx - pcb_insert_d/2 - rib_inner_x >= 0.6,
+       "not enough rib material inboard of the PCB insert bore");
+assert(pcb_hole_dx + pcb_insert_d/2 + 1.2 <= cavity_w/2 + wall_t,
+       "PCB insert bore is too close to the outside of the tray wall");
+assert(rib_inner_x >= rj45_body_w/2 - 0.01,
+       "support ribs would run underneath the magjack");
 
 // ============================================================================
 // MODULES
@@ -199,38 +216,40 @@ module tray() {
             cube([wall_t, side_wall_h, wall_end_z - front_t]);
 }
 
-// Rectangular bosses under the PCB's own mounting holes. Rectangular rather
-// than round on purpose: every face is either vertical or bonded to the slab,
-// so the boss is fully self-supporting in the print orientation.
-module pcb_bosses() {
-    b = pcb_insert_d + 2*pcb_boss_pad;
-    for (p = pcb_hole_positions())
-        difference() {
-            translate([p[0] - b/2, tray_bot_y, p[1] - b/2])
-                cube([b, floor_t + standoff_h, b]);
-            // insert bore, open upward at the PCB seating face
+// Two continuous ribs running the whole length of the tray at the PCB's
+// mounting-hole X positions. The board sits on them, and they carry the two
+// heat-set inserts. Continuous (rather than isolated pads) on purpose: the
+// ribs are rooted in the front slab at Z=front_t and grow straight back, so
+// every face is vertical or bonded - fully self-supporting in this print
+// orientation, no islands starting in mid-air.
+module pcb_rails() {
+    rib_outer_x = cavity_w/2 + wall_t;   // merges into the side wall
+    difference() {
+        for (sgn = [-1, 1])
+            translate([sgn > 0 ? rib_inner_x : -rib_outer_x,
+                       tray_bot_y, front_t])
+                cube([rib_outer_x - rib_inner_x,
+                      floor_t + standoff_h,
+                      pcb_rear_z - front_t]);
+
+        // insert bores, open upward at the PCB seating face
+        for (p = pcb_hole_positions())
             translate([p[0], standoff_h + 0.01, p[1]])
                 rotate([90, 0, 0])
                     cylinder(d = pcb_insert_d, h = pcb_insert_depth + 0.01);
-        }
+    }
 }
 
-// Unbored pads at the rear corners so the board is backed up when dupont
-// connectors are pushed onto the header.
-module rear_support_pads() {
-    b = 5.0;
-    for (s = [-1, 1])
-        translate([s * pcb_hole_dx - b/2, tray_bot_y, pcb_rear_z - b - 0.5])
-            cube([b, floor_t + standoff_h, b]);
-}
-
-// Fins bracing the side walls back against the flange.
+// Fins bracing the side walls back against the flange, on the OUTER wall face
+// so they actually add section rather than sitting inside the wall.
 module gussets() {
     g = 5.0;
+    t = 2.0;
     for (s = [-1, 1])
-        translate([s * (cavity_w/2 + wall_t/2) - wall_t/2, 0, front_t])
+        translate([s > 0 ? cavity_w/2 + wall_t : -(cavity_w/2 + wall_t + t),
+                   0, front_t])
         rotate([90, 0, 90])
-        linear_extrude(height = wall_t)
+        linear_extrude(height = t)
             polygon([[0, 0], [g, 0], [0, g]]);
 }
 
@@ -238,8 +257,7 @@ module ch9121_carrier() {
     union() {
         flange();
         tray();
-        pcb_bosses();
-        rear_support_pads();
+        pcb_rails();
         gussets();
     }
 }

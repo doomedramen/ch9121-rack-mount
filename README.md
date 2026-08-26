@@ -1,86 +1,114 @@
 # CH9121 UART-to-Ethernet Rack Panel Carrier
 
-A rear-mounted 3D-printable carrier that holds a CH9121 UART-to-Ethernet
-module behind a hand-cut opening in an existing Raspberry Pi rack fascia.
-Built from the design spec in this project; see `ch9121_mount.scad` for the
-full parametric source.
-
-## Files
+A rear-mounted 3D-printable **open tray** that holds a CH9121 UART-to-Ethernet
+module behind a hand-cut opening in a Raspberry Pi rack fascia. The board's
+2×8 pin header stays fully exposed so it can be wired to the Pi's GPIO with
+dupont jumpers.
 
 | File | Purpose |
 |---|---|
-| `ch9121_mount.scad` | Parametric OpenSCAD source. Every dimension is a named variable at the top of the file. |
-| `ch9121_carrier.stl` | Printable export (reference geometry / fit-check boxes excluded). |
-| `renders/` | Preview images (isometric, flange face, internal cross-section). |
+| `ch9121_mount.scad` | Parametric OpenSCAD source. Every dimension is a named variable at the top. |
+| `ch9121_carrier.stl` | Printable export. Manifold, genus 3 (RJ45 opening + 2 flange screw holes). |
+| `renders/` | `iso.png` (into the tray), `fit.png` (with the module as reference geometry), `flange.png` (front elevation). |
 
-## How the part is built
+## Design
 
-Print orientation matches the spec's recommendation: the **flange (glue
-face) sits flat on the print bed**, and the carrier body extends upward.
-In the model's own coordinate system:
+Open on top, screwed at both ends — no lid, no rails, no snap tab, no glue.
 
-- **X** = left / right (flange width)
-- **Y** = up / down (flange height)
-- **Z** = front → back (Z=0 is the exterior glue face; +Z runs back toward
-  the Raspberry Pi)
+```
+        flange (Z 0-4)          open tray (Z 4-48.2)
+        +--------+
+  RJ45  |  []    |======================\        <- side walls stop 7mm short
+  hole  |        |   ribs carry the PCB  |          of the rear so nothing
+        +--------+======================/          crowds the dupont housings
+         ^      ^
+         M3 inserts, screws enter from the front of the panel
+```
 
-Structure, front to back:
+- **X** = left / right
+- **Y** = up / down — **Y = 0 is the top face of the tray floor**
+- **Z** = front → back — Z = 0 is the outside face of the flange
 
-1. **Flange** (Z 0–3mm) — flat glue face against the rear of the rack fascia.
-2. **Front-stop slab** (Z 3–6mm) — solid except for the RJ45 opening; this
-   is what the RJ45/PCB butts up against, and it also gives the M3 bosses
-   their full 6mm depth without any extra material.
-3. **Rail tube** (Z 6–50mm) — hollow channel with grooved rails on the left
-   and right inner walls that the PCB slides down into from the open top.
-4. **Snap tab** — a small cantilever near the open end that catches the
-   PCB's rear edge so it can't slide out backward when a cable is unplugged.
+Front to back: a 4 mm flange/front-stop slab with the RJ45 cutout and the two
+M3 insert bosses, then a U-channel — floor plus two side walls — running back
+48.2 mm. Two continuous ribs at the PCB's mounting-hole X positions run the
+whole length of the tray and carry the M2.5 inserts the board screws down to.
 
-## Rough dimensions used (see spec for full detail)
+Overall: **36 × 28 × 48.2 mm**.
 
-- Module envelope: 43 × 23 × 14.5 mm (widely repeated across sellers —
-  confirmed by search)
-- RJ45 carrier opening: 17.0 × 14.5 mm, corner radius 0.8mm
-- Rack hand-cut opening (not printed): 18 × 15.5 mm
-- Flange: 36 × 28 × 3 mm
-- PCB cavity: 23.6 mm wide × 15.5 mm tall, 44mm usable channel length
-- M3 mounting: 2-hole variant, ±14mm on X, 3.4mm clearance / 4.2mm insert bore
+### Two sets of brass heat-set inserts
 
-## What's still a rough guess — verify before a final print
+| Where | Size | Bore | Depth | Screw enters from |
+|---|---|---|---|---|
+| Flange, 2 off at X ±14 | M3 | `flange_insert_d` 4.2 | 5.5 mm | the **front** of the rack panel |
+| Tray ribs, 2 off at X ±10.5 | M2.5 | `pcb_insert_d` 3.6 | 4.0 mm | **above**, through the board's own holes |
 
-These couldn't be pinned down from any datasheet or seller listing (none
-publish a mechanical drawing of the assembled board), so they're set to
-sensible centered defaults and flagged as variables in the `.scad` file:
+The flange bores open at the front face and are backed by 2.5 mm bosses on the
+rear face, so a standard 5 mm-long M3 insert fits without thickening the whole
+flange. Those bosses sit at Y 7.1–15.1, above the tray, so they never foul the
+board.
 
-- `rj45_y_offset` — vertical position of the RJ45 body relative to the PCB
-  centerline (default: centered)
-- `pcb_rail_y` — vertical position of the PCB itself within the cavity
-  (default: centered)
-- `rj45_setback` — how far the RJ45 front face sits back from the PCB's
-  front edge (default: 0 / flush)
+The PCB bores open upward at the seating face, 3 mm above the tray floor. That
+3 mm gap plus a 16 mm-wide clear channel down the middle of the tray
+(`rib_inner_x` ±8) is what the magjack's heat-staked pegs and RJ45 solder
+tails drop into — the board seats on the ribs at X 8.0–12.75 each side and on
+nothing else.
 
-**Also worth double-checking:** one seller (chinalctech) lists a CH9121
-module variant at **50 × 25 mm** rather than 43 × 23 mm — a meaningfully
-different footprint. Confirm which size your actual board is before
-committing to a final print; the cavity/flange numbers above assume the
-43 × 23 × 14.5mm version.
+## The module
 
-Fastest way to nail these down: photograph your module from the top and
-the side next to a ruler/graph paper, or just measure with calipers —
-then update the handful of variables at the top of the .scad file and
-re-export.
+Measured off the seller's dimension drawing and photos:
 
-## Printing notes
+- PCB **43.0 × 25.5 mm** (the 23 mm figure repeated across listings is wrong)
+- RJ45 magjack (HR911105A) overhangs the PCB's front edge by **~4.2 mm**, and
+  the front slab is 4.0 mm thick so the connector face lands flush with the
+  outside of the flange
+- **Two** mounting holes, both near the front corners: X ±10.5, 2.7 mm back
+  from the front edge, ~3.0–3.2 mm diameter
+- 2×8 header along the rear edge, occupying roughly the last 5 mm
 
-- Recommended material: PETG (preferred), PLA or ABS/ASA also fine.
-- Print with the flange face-down on the bed (default orientation in the
-  file) — gives a flat, support-free glue surface.
-- Minimum wall thickness used: 2.0mm; flange 3.0mm.
-- No supports should be needed in this orientation.
+## Still to verify with calipers
+
+Everything below is read off photos, not a datasheet. The `.scad` marks each
+one `VERIFY`.
+
+| Variable | Default | What to measure |
+|---|---|---|
+| `rj45_overhang` | 4.2 | How far the magjack sticks out past the PCB's front edge. **The single most important number** — `front_t` must stay below it or the connector can't reach the panel. |
+| `pcb_hole_dx` / `pcb_hole_dz` | 10.5 / 2.7 | Mounting hole centres |
+| `pcb_insert_d` | 3.6 (M2.5) | If your holes measure ≥3.3 mm, switch to M3 and set 4.2 |
+| `rib_inner_x` | 8.0 | Must clear the widest thing under the magjack |
+| `underside_clear` | 2.0 | How far the pegs/tails hang below the PCB |
+| `rj45_body_h` | 13.0 | Magjack height **above the PCB top face** — this sets the RJ45 opening's Y position |
+| `pcb_t` | 1.6 | PCB thickness |
+
+The model `assert`s its own consistency, so a bad combination fails the render
+loudly instead of exporting a part that can't work. Change a variable, re-run,
+and if it renders the geometry is self-consistent.
+
+## Printing
+
+- PETG preferred; PLA or ABS/ASA fine.
+- **Flange face down on the bed** (the default orientation in the file).
+- **No supports needed.** Nothing in the model overhangs in −Z: the tray, the
+  ribs and the gussets are all rooted in the flange slab at Z = 4 and grow
+  straight up, and the bosses are rectangular rather than round for exactly
+  that reason. The only overhangs are the tops of the two M2.5 bores, which
+  are 3.6 mm horizontal holes — they bridge fine, and a heat-set insert melts
+  through any droop anyway.
+- Walls 2.0 mm, floor 2.5 mm, flange 4.0 mm.
+
+## Rebuilding
+
+```bash
+/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD --backend=manifold -o ch9121_carrier.stl ch9121_mount.scad
+```
+
+`show_reference = true` adds translucent PCB / magjack / header stand-ins for a
+visual fit check. Leave it `false` when exporting.
 
 ## Next steps
 
-1. Measure your actual module (calipers or photo-against-graph-paper) and
-   adjust `rj45_y_offset`, `pcb_rail_y`, `rj45_setback` if needed.
-2. Print a test copy and dry-fit the module before gluing.
-3. Confirm heat-set insert size against `m3_insert_d` (currently 4.2mm)
-   if using the M3 mounting option.
+1. Measure the module and update the `VERIFY` variables.
+2. Print a test copy and dry-fit before pressing any inserts in.
+3. Cut the fascia opening at 18.0 × 15.5 mm (`rack_hole_w` / `rack_hole_h`),
+   plus two M3 clearance holes at 28 mm spacing.
