@@ -8,10 +8,10 @@ dupont jumpers.
 | File | Purpose |
 |---|---|
 | `ch9121_mount.scad` | Parametric OpenSCAD source. Every dimension is a named variable at the top. |
-| `ch9121_carrier.stl` | Printable export. Manifold, genus 3 (RJ45 opening + 2 flange screw holes). |
-| `ch9121_coupon.stl` | **Print this first.** The front 14 mm of the part only — a few minutes on the bed, and it tells you whether the board's screw holes and the magjack actually line up before you commit. |
+| `ch9121_carrier.stl` | Printable export. Manifold, genus 5 (RJ45 opening, 2 flange bores, 2 board bores). |
+| `ch9121_coupon.stl` | **Print this first.** The front 14 mm of the part only — a few minutes on the bed. Checks that the board's screw holes and the magjack line up, and lets you test-press an insert before committing. |
 | `ch9121_fascia_stencil.stl` | 2 mm flat plate for marking the fascia: flange outline, the 17.6 × 15.3 opening, and the two M2 holes. Hold it on the panel, mark or drill through, cut the opening to the line. Symmetric both ways so it can't go on backwards. |
-| `renders/` | `iso.png` (into the tray), `fit.png` (with the module as reference geometry), `flange.png` (front elevation). |
+| `renders/` | `iso.png` (into the tray), `fit.png` (module shown as reference geometry), `flange.png` (front elevation), `underside.png` (insert bores), `stencil.png`. |
 
 ## Design
 
@@ -45,15 +45,27 @@ Overall: **36 × 30 × 48.2 mm**.
 | Where | Bore | Depth | Screw enters from |
 |---|---|---|---|
 | Flange, 2 off at X ±14 | `flange_insert_d` 3.2 | 4.0 mm | the **front** of the rack panel |
-| Tray ribs, 2 off at X ±10.16 | `pcb_insert_d` 3.2 | 4.0 mm | **above**, through the board's own holes |
+| Tray ribs, 2 off at X ±10.16 | `pcb_insert_d` 3.2 | 4.0 mm | **above**, through the board's own holes (insert itself presses in from the tray *underside* — see below) |
 
 The flange bores open at the front face and are backed by 2.5 mm bosses on the
 rear face, giving 6.5 mm of stack for a 4 mm insert without thickening the
 whole flange. Those bosses sit at Y 7.7–14.2, clear above the tray, so they
 never foul the board.
 
-The PCB bores open upward at the seating face, 3.6 mm above the tray floor —
-that height is set by the 3 mm of header solder tail hanging under the board.
+The PCB bores open **downward, at the underside of the tray floor**, and the
+insert is pressed in from there. It cannot go in from above: the bore mouth
+sits 2.54 mm behind a flange that stands ~23 mm proud of the tray floor, and a
+soldering iron's barrel fouls the flange long before the tip seats. The
+underside is a flat open face with the flange protruding only 0.55 mm past it.
+The screw then passes down through the board and a 2.4 mm clearance section to
+reach the insert below — M2×6 gives 2.9 mm of engagement in the 4 mm insert
+and still clears the tray bottom by 1.1 mm.
+
+Those bores are cut in `pcb_screw_holes()` at **assembly level**, not inside
+`pcb_rails()`. The tray floor is a separate solid, so subtracting them from the
+ribs alone leaves the floor plugging the bottom of every bore — which is
+exactly what happened, and is why the exported genus is worth checking (5:
+RJ45 opening, two flange bores, two board through-holes).
 
 Where the board is allowed to touch is driven by what hangs below it. The
 magjack's heat-staked pegs and their solder joints span up to ~15.3 mm, so the
@@ -115,10 +127,6 @@ Everything else is measured. If a number turns out wrong, it's one variable at
 the top of the `.scad` — change it, re-run, and the asserts will tell you if
 the change broke something else.
 
-The model `assert`s its own consistency, so a bad combination fails the render
-loudly instead of exporting a part that can't work. Change a variable, re-run,
-and if it renders the geometry is self-consistent.
-
 ## Printing
 
 - PETG preferred; PLA or ABS/ASA fine.
@@ -150,12 +158,37 @@ $OS --backend=manifold -o ch9121_fascia_stencil.stl -D 'part="stencil"' ch9121_m
 `show_reference = true` adds translucent PCB / magjack / header stand-ins for a
 visual fit check. Leave it `false` when exporting.
 
-## Next steps
+## Hardware
 
-1. Measure the module and update the `VERIFY` variables.
-2. Print a test copy and dry-fit before pressing any inserts in.
-3. Print `ch9121_fascia_stencil.stl`, hold it on the panel, mark through it,
-   and cut. That's a 17.6 × 15.3 mm opening (`rack_hole_w` / `rack_hole_h`,
-   derived from the printed opening plus 0.4 mm per side) plus two M2
-   clearance holes at 28 mm spacing. It clears the 1.08 mm of magjack that
-   stands proud of the flange with 0.8 mm to spare all round.
+| | |
+|---|---|
+| Inserts | 4 × M2 heat-set, **4.0 mm long, 3.2 mm OD**. One size covers both bores. |
+| Screws | 4 × **M2×6 button head**. Length is measured under the head, so it is 6 mm of penetration at both ends. |
+
+Button head rather than countersunk on the board: the PCB's holes are
+plain-drilled, so a conical head cannot seat — it bears on a 1.27 mm rim of
+FR4 and wedges. Countersunk would be fine on the flange (flush panel) but then
+you would have to countersink the fascia by hand, and button head costs only
+~1.1 mm of head standing proud.
+
+**Do not use M2×8 on the board** — 7 mm of penetration against 6.1 mm of
+material punches through the tray floor. M2×8 is fine on the flange if your
+fascia is thicker than ~3 mm; the relief bore runs right through, so the tip
+just enters open air behind.
+
+## Assembly order
+
+1. Print `ch9121_coupon.stl`. Check the screw holes line up, the magjack drops
+   into the opening, and an insert presses in cleanly.
+2. Print `ch9121_carrier.stl` and `ch9121_fascia_stencil.stl`.
+3. **Dry-fit the board before pressing any inserts.** They do not come out.
+4. Press the two board inserts in from the **tray underside**, and the two
+   flange inserts in from the **front face**. Seat each a hair below flush —
+   proud stops the part sitting flat, and on the flange it holds the carrier
+   off the panel. Scrape back any ridge of displaced plastic.
+5. Hold the stencil on the fascia, mark through it, cut. That is a
+   17.6 × 15.3 mm opening (`rack_hole_w` / `rack_hole_h`, the printed opening
+   plus 0.4 mm per side) plus two M2 clearance holes at 28 mm spacing. It
+   clears the 1.08 mm of magjack standing proud of the flange with 0.8 mm to
+   spare all round.
+6. Screw the carrier to the fascia, then the board into the tray.

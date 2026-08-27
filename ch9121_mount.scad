@@ -58,6 +58,16 @@ pcb_hole_dz   = 2.54;             // back from the PCB front edge
 pcb_hole_d        = 2.54;  // measured, for reference
 pcb_insert_d      = 3.2;   // M2 heat-set insert bore                  VERIFY
 pcb_insert_depth  = 4.0;   // insert length + a little
+pcb_screw_d       = 2.4;   // M2 clearance, insert up to the seating face
+board_screw_len   = 6.0;   // M2x6 button head, length measured under the head
+
+// The board inserts are installed from the UNDERSIDE of the tray floor, not
+// from above. Above, the bore mouth sits 2.54mm behind a flange that stands
+// ~23mm proud of the tray floor - a soldering iron cannot get a tip down
+// there without its barrel melting the flange. The underside is a flat, open
+// face with the flange protruding only 0.55mm past it, so the iron goes
+// straight in. The screw then passes down through the board and a clearance
+// hole to reach the insert below.
 
 // Inner edge of the two support ribs. The board rests on these, so they must
 // stay clear of everything hanging off the UNDERSIDE of the magjack - its two
@@ -191,8 +201,12 @@ assert(standoff_h >= underside_clear + 0.5,
        "standoff_h too low: the RJ45's underside posts will hold the PCB up");
 assert(pcb_insert_d > pcb_hole_d,
        "insert bore must be wider than the board's own hole");
-assert(pcb_insert_depth + 0.8 <= standoff_h + floor_t,
-       "PCB insert bore would break through the tray floor");
+assert(pcb_insert_depth + 1.0 <= standoff_h + floor_t,
+       "no room above the PCB insert for the screw clearance section");
+assert(board_screw_len - pcb_t - (standoff_h + floor_t - pcb_insert_depth) >= 2.5,
+       "board screw does not reach far enough into the insert");
+assert(board_screw_len <= pcb_t + standoff_h + floor_t,
+       "board screw would poke out of the bottom of the tray floor");
 assert(flange_insert_depth + 0.8 <= front_t + flange_boss_h,
        "flange insert bore would break through the flange face");
 assert(flange_y0 <= rj45_cy - carrier_rj45_h/2 - 1.5 &&
@@ -320,11 +334,6 @@ module pcb_rails() {
         translate([-cavity_w/2, 0.4, pcb_rear_z - rear_rib_relief])
             cube([cavity_w, rib_h, rear_rib_relief + 1]);
 
-        // insert bores, open upward at the PCB seating face
-        for (p = pcb_hole_positions())
-            translate([p[0], standoff_h + 0.01, p[1]])
-                rotate([90, 0, 0])
-                    cylinder(d = pcb_insert_d, h = pcb_insert_depth + 0.01);
     }
 }
 
@@ -341,12 +350,31 @@ module gussets() {
             polygon([[0, 0], [g, 0], [0, g]]);
 }
 
+// Board screw holes: the heat-set insert bore, opening at the UNDERSIDE of
+// the tray floor, and the screw clearance running up from it to the seating
+// face. Cut at assembly level, NOT inside pcb_rails(): the tray floor is a
+// separate solid, and subtracting these from the ribs alone leaves the floor
+// plugging the bottom of every bore.
+module pcb_screw_holes() {
+    for (p = pcb_hole_positions()) {
+        translate([p[0], tray_bot_y - 0.01, p[1]])
+            rotate([-90, 0, 0])
+                cylinder(d = pcb_insert_d, h = pcb_insert_depth + 0.01);
+        translate([p[0], tray_bot_y - 0.5, p[1]])
+            rotate([-90, 0, 0])
+                cylinder(d = pcb_screw_d, h = floor_t + standoff_h + 1.5);
+    }
+}
+
 module ch9121_carrier() {
-    union() {
-        flange();
-        tray();
-        pcb_rails();
-        gussets();
+    difference() {
+        union() {
+            flange();
+            tray();
+            pcb_rails();
+            gussets();
+        }
+        pcb_screw_holes();
     }
 }
 
