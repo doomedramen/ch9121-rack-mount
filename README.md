@@ -10,6 +10,7 @@ dupont jumpers.
 | `ch9121_mount.scad` | Parametric OpenSCAD source. Every dimension is a named variable at the top. |
 | `ch9121_carrier.stl` | Printable export. Manifold, genus 3 (RJ45 opening + 2 flange screw holes). |
 | `ch9121_coupon.stl` | **Print this first.** The front 14 mm of the part only — a few minutes on the bed, and it tells you whether the board's screw holes and the magjack actually line up before you commit. |
+| `ch9121_fascia_stencil.stl` | 2 mm flat plate for marking the fascia: flange outline, the 18 × 15.5 opening, and the two M2 holes. Hold it on the panel, mark or drill through, cut the opening to the line. Symmetric both ways so it can't go on backwards. |
 | `renders/` | `iso.png` (into the tray), `fit.png` (with the module as reference geometry), `flange.png` (front elevation). |
 
 ## Design
@@ -52,13 +53,16 @@ whole flange. Those bosses sit at Y 7.7–14.2, clear above the tray, so they
 never foul the board.
 
 The PCB bores open upward at the seating face, 3.6 mm above the tray floor —
-that height is set by the 3 mm of header solder tail hanging under the board,
-which is by far the longest thing under there. A 15.6 mm-wide clear channel
-runs down the middle of the tray (`rib_inner_x` ±7.8) for the magjack's
-heat-staked pegs, and over the last 8 mm the ribs are cut nearly to the floor
-(`header_relief_*`) because the 2×8 header's outermost pins land at X ±8.89,
-right on top of them. The board seats on the ribs at X 7.8–12.7 each side at
-the front, and 9.6–12.7 under the header.
+that height is set by the 3 mm of header solder tail hanging under the board.
+
+Where the board is allowed to touch is driven by what hangs below it. The
+magjack's heat-staked pegs and their solder joints span up to ~15.3 mm, so the
+seating ribs start at X ±9.6, leaving a 19.2 mm clear channel — 1.95 mm of
+margin each side. Only a short pad at each screw position (Z 4–10.4, forward
+of the pegs) reaches inboard to ±7.8 to give the M2 bore a 0.76 mm collar.
+Under the header the ribs are cut away to the floor entirely, so it makes no
+difference exactly where the header pads sit; the board is supported for its
+first 33 mm and cantilevers the last 11 mm, which 1 mm FR4 handles fine.
 
 ## The module
 
@@ -69,7 +73,7 @@ Measured off the board with calipers. It is an imperial design — 1″ wide,
 |---|---|
 | PCB | **25.4 × 43.18 × 1.0 mm** (1″ × 1.7″) — the 23 mm width repeated across listings is wrong |
 | RJ45 magjack (HanRun HR911105A) | 12.7 mm (0.5″) tall above the board, overhangs the front edge by 5.08 mm (0.2″) |
-| Mounting holes | Two, near the front corners, **2.54 mm (0.1″) diameter**, centres 2.54 mm (0.1″) in from the side edges → X ±10.16 |
+| Mounting holes | Two, at the front corners, **2.54 mm (0.1″) diameter**, centres 2.54 mm (0.1″) in from every edge → X ±10.16, 2.54 back from the front |
 | Under the board | 3 mm of solder tail to clear |
 | 2×8 header | rear edge, 0.1″ pitch, pins stand 7.62 mm (0.3″) proud |
 
@@ -79,7 +83,7 @@ face ends up **1.08 mm proud** of the flange and noses into the fascia cut-out.
 ## Print the coupon first
 
 ```bash
-/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD --backend=manifold -o ch9121_coupon.stl -D test_coupon=true ch9121_mount.scad
+/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD --backend=manifold -o ch9121_coupon.stl -D 'part="coupon"' ch9121_mount.scad
 ```
 
 It's the front 14 mm of the part — flange, both insert bosses, both flange
@@ -97,7 +101,6 @@ the connector lined up.
 
 | Variable | Default | What to check |
 |---|---|---|
-| `pcb_hole_dz` | 2.54 | Assumed the same 0.1″ inset from the **front** edge as from the sides. Worth a caliper check. |
 | `pcb_insert_d` / `flange_insert_d` | 3.2 | Both are M2. 3.2 suits the common M2×4.0 insert with a 3.2 mm OD, but some M2 inserts want 3.5 — check yours before pressing. |
 | `rib_inner_x` | 7.8 | Must clear the magjack's underside pegs (photos put them around ±6.5). |
 
@@ -127,6 +130,16 @@ and if it renders the geometry is self-consistent.
 /Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD --backend=manifold -o ch9121_carrier.stl ch9121_mount.scad
 ```
 
+`part` selects what gets exported — `"carrier"` (default), `"coupon"` or
+`"stencil"`:
+
+```bash
+OS=/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD
+$OS --backend=manifold -o ch9121_carrier.stl        ch9121_mount.scad
+$OS --backend=manifold -o ch9121_coupon.stl         -D 'part="coupon"'  ch9121_mount.scad
+$OS --backend=manifold -o ch9121_fascia_stencil.stl -D 'part="stencil"' ch9121_mount.scad
+```
+
 `show_reference = true` adds translucent PCB / magjack / header stand-ins for a
 visual fit check. Leave it `false` when exporting.
 
@@ -134,6 +147,8 @@ visual fit check. Leave it `false` when exporting.
 
 1. Measure the module and update the `VERIFY` variables.
 2. Print a test copy and dry-fit before pressing any inserts in.
-3. Cut the fascia opening at 18.0 × 15.5 mm (`rack_hole_w` / `rack_hole_h`),
-   plus two M2 clearance holes at 28 mm spacing. The opening must also clear
-   the 1.08 mm of magjack that stands proud of the flange.
+3. Print `ch9121_fascia_stencil.stl`, hold it on the panel, mark through it,
+   and cut. That's the 18.0 × 15.5 mm opening (`rack_hole_w` / `rack_hole_h`)
+   plus two M2 clearance holes at 28 mm spacing. The opening also has to clear
+   the 1.08 mm of magjack that stands proud of the flange — it does, with
+   1.0 mm to spare on width and 1.4 mm on height.

@@ -46,10 +46,11 @@ underside_clear  = 3.0;    // measured - the header's solder tails are the
                             // long thing under there, not the magjack
 
 // The module's two mounting holes, both near the front (RJ45) corners.
-// Hole centres measured 0.1 inch in from the side edges.
+// Hole centres measured 0.1 inch in from every edge - both sides and the
+// front. Corner holes on a 0.1 inch grid, consistent with the rest of the
+// board being an imperial design.
 pcb_hole_dx   = pcb_w/2 - 2.54;   // = 10.16
-pcb_hole_dz   = 2.54;   // back from the PCB front edge - assumed the same
-                         // 0.1 inch inset as the sides                 VERIFY
+pcb_hole_dz   = 2.54;             // back from the PCB front edge
 // Holes measure 2.54mm (0.1 inch) across. That is below M2.5 clearance
 // (2.7-2.9), so the board takes M2 screws. M2 is also the safe way to be
 // wrong here: an M2 screw still passes a 3mm hole, whereas an M2.5 screw
@@ -61,28 +62,41 @@ pcb_insert_depth  = 4.0;   // insert length + a little
 // Inner edge of the two support ribs. The board rests on these, so they must
 // stay clear of everything hanging off the UNDERSIDE of the magjack - its two
 // heat-staked pegs (roughly +/-6.5 on the photos) and the RJ45 solder tails.
-// With the holes only 2.54mm in from the board edge the bore already reaches
-// x 8.56, so the ribs have to start inboard of the magjack shell (16mm wide,
-// so +/-8). That is fine: what actually hangs below the board at the front is
-// the magjack's heat-staked pegs, which sit around +/-6.5.           VERIFY
-rib_inner_x = 7.8;
+// What hangs below the board decides where it can rest.
+//   - under the magjack: solder tails plus two heat-staked pegs / shield tabs,
+//     measured 0.5-0.6 inch across (call it 15.3mm worst case)
+//   - under the header: 8 positions at 0.1 inch pitch, so pins at +/-8.89
+// The ribs the board seats on therefore start at 9.6, outboard of both, and
+// run the full length of the tray. Only a short pad at each screw position
+// reaches inboard to 7.8 to carry the insert bore - and that pad sits at
+// z 4..10.6, forward of where the magjack's pegs are.
+magjack_underside_span = 15.3;   // widest thing under the connector  VERIFY
+header_half_span       = 8.89;   // 8 positions at 0.1 inch pitch
+header_pin_h           = 7.62;   // 0.3 inch above the board (reference only)
 
-// The 2x8 header is a different problem. 8 positions at 0.1 inch pitch spans
-// 17.8mm, so its outermost pins land at x +/-8.89 - right on top of the ribs.
-// The ribs are therefore dropped away under the header, at the rear only, so
-// the insert bosses at the front keep their full collar.
-header_half_span   = 8.89;
-header_pin_h       = 7.62;  // 0.3 inch above the board (reference geometry)
-header_relief_x    = 9.6;   // ribs dropped inboard of this...
-header_relief_len  = 8.0;   // ...over this much of the rear of the tray
-header_relief_drop = 3.2;   // by this much - the 3mm tails reach almost to
-                             // the floor, so the ribs are cut nearly away here
+rib_inner_x  = 9.6;   // seating band starts here
+boss_inner_x = 7.8;   // local insert pad reaches this far in
+boss_pad_z   = 1.2;   // pad overrun behind the bore
+
+// Over the rear of the tray the ribs are cut away to the floor completely.
+// The header's solder tails are 3mm long and its pads run close to the board
+// edge, so rather than depend on exactly where they sit, nothing is left for
+// them to land on. The board is screwed at the front and supported for the
+// first 32mm; the last 11mm cantilevers, which 1mm FR4 handles fine when you
+// push a dupont connector on.
+rear_rib_relief = 11.0;
 
 // ---------------------------------------------------------------------------
 // 2. RACK FASCIA HAND-CUT OPENING (reference only, you cut this by hand)
 // ---------------------------------------------------------------------------
 rack_hole_w = 18.0;
 rack_hole_h = 15.5;
+
+// Marking stencil: a flat plate with the same outline as the flange, the
+// fascia opening, and the two screw holes. Hold it on the panel, mark or
+// drill through it, cut the opening to the line.
+stencil_t       = 2.0;
+stencil_pilot_d = 2.4;   // M2 clearance, so an M2 drill can guide through it
 
 // ---------------------------------------------------------------------------
 // 3. CARRIER RJ45 OPENING (printed, tighter than the hand-cut hole)
@@ -171,20 +185,19 @@ assert(flange_y0 <= tray_bot_y,
        "flange does not reach down far enough to back up the tray floor");
 assert(cavity_w/2 + wall_t + 2.0 <= flange_w/2,
        "gusset fins would stick out past the flange edge");
-assert(pcb_hole_dx - pcb_insert_d/2 - rib_inner_x >= 0.5,
-       "not enough rib material inboard of the PCB insert bore");
-assert(header_relief_x > rib_inner_x && header_relief_drop < standoff_h,
-       "header relief groove is malformed");
-assert(header_relief_x >= header_half_span + 0.4,
-       "header relief is too narrow - the outer header pins would land on a rib");
-assert(pcb_w/2 - header_relief_x >= 3.0,
-       "rear seating band is too narrow to back the board up when you push connectors on");
-assert(pcb_front_z + pcb_hole_dz + pcb_insert_d < pcb_rear_z - header_relief_len,
-       "header relief would cut into the insert boss collars");
+assert(pcb_hole_dx - pcb_insert_d/2 - boss_inner_x >= 0.5,
+       "not enough pad material inboard of the PCB insert bore");
+assert(2*rib_inner_x >= magjack_underside_span + 1.0,
+       "seating ribs are too close together - the magjack's underside would land on them");
+assert(rib_inner_x >= header_half_span + 0.5,
+       "seating ribs are too close together - the header pins would land on them");
+assert(pcb_w/2 - rib_inner_x >= 3.0,
+       "seating band is too narrow to hold the board flat");
+assert(pcb_front_z + pcb_hole_dz + pcb_insert_d/2 + boss_pad_z
+         < pcb_rear_z - rear_rib_relief,
+       "rear rib relief would eat into the insert pads");
 assert(pcb_hole_dx + pcb_insert_d/2 + 1.2 <= cavity_w/2 + wall_t,
        "PCB insert bore is too close to the outside of the tray wall");
-assert(rib_inner_x >= rj45_body_w/2 - 1.5,
-       "support ribs would run well underneath the magjack");
 
 // ============================================================================
 // MODULES
@@ -259,24 +272,34 @@ module tray() {
 // every face is vertical or bonded - fully self-supporting in this print
 // orientation, no islands starting in mid-air.
 module pcb_rails() {
-    rib_outer_x = cavity_w/2 + wall_t;   // merges into the side wall
-    difference() {
-        for (sgn = [-1, 1])
-            translate([sgn > 0 ? rib_inner_x : -rib_outer_x,
-                       tray_bot_y, front_t])
-                cube([rib_outer_x - rib_inner_x,
-                      floor_t + standoff_h,
-                      pcb_rear_z - front_t]);
+    rib_outer_x = cavity_w/2 + wall_t;         // merges into the side wall
+    rib_h       = floor_t + standoff_h;
+    pad_end_z   = pcb_front_z + pcb_hole_dz + pcb_insert_d/2 + boss_pad_z;
 
-        // rear relief, so the header's outer pins and their solder tails
-        // never land on a rib
-        for (sgn = [-1, 1])
-            translate([sgn > 0 ? rib_inner_x : -header_relief_x,
-                       standoff_h - header_relief_drop,
-                       pcb_rear_z - header_relief_len])
-                cube([header_relief_x - rib_inner_x,
-                      header_relief_drop + 1,
-                      header_relief_len + 1]);
+    difference() {
+        union() {
+            // full-length seating ribs, outboard of everything that hangs
+            // below the board
+            for (sgn = [-1, 1])
+                translate([sgn > 0 ? rib_inner_x : -rib_outer_x,
+                           tray_bot_y, front_t])
+                    cube([rib_outer_x - rib_inner_x, rib_h,
+                          pcb_rear_z - front_t]);
+
+            // short pad at each screw position, reaching inboard far enough
+            // to give the insert bore a collar. Rooted on the front slab at
+            // Z=front_t so it is self-supporting.
+            for (p = pcb_hole_positions())
+                translate([p[0] > 0 ? boss_inner_x : -rib_outer_x,
+                           tray_bot_y, front_t])
+                    cube([rib_outer_x - boss_inner_x, rib_h,
+                          pad_end_z - front_t]);
+        }
+
+        // clear the ribs away under the header. Kept inboard of the side
+        // walls so it only removes rib, not wall.
+        translate([-cavity_w/2, 0.4, pcb_rear_z - rear_rib_relief])
+            cube([cavity_w, rib_h, rear_rib_relief + 1]);
 
         // insert bores, open upward at the PCB seating face
         for (p = pcb_hole_positions())
@@ -308,6 +331,24 @@ module ch9121_carrier() {
     }
 }
 
+// Flat marking stencil for the rack fascia. Same outline as the flange, so it
+// also marks where the carrier body will sit. Symmetric top-to-bottom and
+// left-to-right, so it cannot be held on the wrong way round.
+module fascia_stencil() {
+    difference() {
+        translate([-flange_w/2, flange_y0, 0])
+            cube([flange_w, flange_h, stencil_t]);
+
+        translate([0, rj45_cy, -0.5])
+            rounded_rect_prism(rack_hole_w, rack_hole_h, carrier_rj45_r,
+                               0, stencil_t + 1);
+
+        for (p = flange_hole_positions())
+            translate([p[0], p[1], -0.5])
+                cylinder(d = stencil_pilot_d, h = stencil_t + 1);
+    }
+}
+
 // ============================================================================
 // OPTIONAL: translucent reference geometry, visual fit-check only.
 // Leave false when exporting the STL.
@@ -333,20 +374,27 @@ module reference_module() {
 }
 
 // ============================================================================
-// TEST COUPON
-// Set true to export just the front slice of the part. Prints in a couple of
-// minutes and answers the only two questions a caliper slip can really ruin:
-// do the board's screw holes line up with the two inserts, and does the
-// magjack line up with the opening. Dry-fit the board against it before
-// committing to the full part or pressing any inserts in.
+// WHAT TO EXPORT
+//   "carrier" - the real part
+//   "coupon"  - just the front slice. Prints in a couple of minutes and
+//               answers the only two questions a caliper slip can ruin: do
+//               the board's screw holes line up with the two inserts, and
+//               does the magjack line up with the opening. Dry-fit the board
+//               against it before committing, or pressing any inserts in.
+//   "stencil" - flat plate for marking and cutting the fascia
 // ============================================================================
-test_coupon = false;
-coupon_len  = 14.0;
+part       = "carrier";
+coupon_len = 14.0;
+
+assert(part == "carrier" || part == "coupon" || part == "stencil",
+       "part must be \"carrier\", \"coupon\" or \"stencil\"");
 
 // ============================================================================
 // FINAL ASSEMBLY
 // ============================================================================
-if (test_coupon)
+if (part == "stencil")
+    fascia_stencil();
+else if (part == "coupon")
     intersection() {
         ch9121_carrier();
         translate([-flange_w, flange_y0 - 1, -1])
@@ -355,4 +403,4 @@ if (test_coupon)
 else
     ch9121_carrier();
 
-if (show_reference) reference_module();
+if (show_reference && part != "stencil") reference_module();
