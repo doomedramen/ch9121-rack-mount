@@ -89,8 +89,10 @@ rear_rib_relief = 11.0;
 // ---------------------------------------------------------------------------
 // 2. RACK FASCIA HAND-CUT OPENING (reference only, you cut this by hand)
 // ---------------------------------------------------------------------------
-rack_hole_w = 18.0;
-rack_hole_h = 15.5;
+// Cut by hand, so it gets more slack than the printed opening.
+rack_hole_clear = 0.8;   // per side
+rack_hole_w = rj45_body_w + 2*rack_hole_clear;   // = 17.6
+rack_hole_h = rj45_body_h + 2*rack_hole_clear;   // = 14.3
 
 // Marking stencil: a flat plate with the same outline as the flange, the
 // fascia opening, and the two screw holes. Hold it on the panel, mark or
@@ -101,12 +103,12 @@ stencil_pilot_d = 2.4;   // M2 clearance, so an M2 drill can guide through it
 // ---------------------------------------------------------------------------
 // 3. CARRIER RJ45 OPENING (printed, tighter than the hand-cut hole)
 // ---------------------------------------------------------------------------
-// Deliberately loose - 1.25mm clearance on width, 1.9mm on height around the
-// magjack. This opening is BEHIND the fascia, so nobody sees the gap, and the
-// slack means a couple of millimetres of error in rj45_body_h / standoff_h /
-// pcb_t still leaves the connector lined up with the hole.
-carrier_rj45_w = 18.5;
-carrier_rj45_h = 16.5;
+// Snug now that the coupon print has confirmed the connector lines up. If you
+// ever change rj45_body_h / standoff_h / pcb_t, open this back out to ~1.5 and
+// re-print the coupon before committing to a full part.
+rj45_clear     = 0.4;    // per side
+carrier_rj45_w = rj45_body_w + 2*rj45_clear;   // = 16.8
+carrier_rj45_h = rj45_body_h + 2*rj45_clear;   // = 13.5
 carrier_rj45_r = 0.8;
 rj45_y_trim    = 0;     // nudge the opening up/down if the magjack does not
                          // sit where rj45_body_h says it does          VERIFY
