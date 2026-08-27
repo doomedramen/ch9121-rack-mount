@@ -167,7 +167,13 @@ pcb_bot_y   = standoff_h;                  // PCB underside
 pcb_top_y   = standoff_h + pcb_t;          // PCB top face
 rj45_cy     = pcb_top_y + rj45_body_h/2 + rj45_y_trim;
 
-pcb_front_z = rj45_overhang;               // so the magjack face lands at Z=0
+// The board is pushed forward until its front edge butts the back face of the
+// flange slab - that is the only hard stop it has, so it is where the board
+// actually sits. The magjack then stands (rj45_overhang - front_t) proud of
+// the flange face and noses into the fascia cut-out.
+// Do NOT set this to rj45_overhang: that places the board 1.08mm behind its
+// own hard stop, and every screw position downstream moves with it.
+pcb_front_z = front_t;
 pcb_rear_z  = pcb_front_z + pcb_l;
 floor_end_z = pcb_rear_z + tray_tail;
 wall_end_z  = floor_end_z - rear_wall_relief;
@@ -179,6 +185,8 @@ tray_bot_y  = -floor_t;
 // --- sanity checks (these fail the render loudly rather than printing junk) --
 assert(front_t < rj45_overhang,
        "front_t must be less than rj45_overhang or the RJ45 cannot reach the panel");
+assert(pcb_front_z == front_t,
+       "the PCB seats against the back of the flange slab - pcb_front_z must equal front_t");
 assert(standoff_h >= underside_clear + 0.5,
        "standoff_h too low: the RJ45's underside posts will hold the PCB up");
 assert(pcb_insert_d > pcb_hole_d,

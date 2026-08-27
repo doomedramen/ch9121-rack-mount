@@ -33,10 +33,10 @@ Open on top, screwed at both ends — no lid, no rails, no snap tab, no glue.
 
 Front to back: a 4 mm flange/front-stop slab with the RJ45 cutout and the two
 M2 insert bosses, then a U-channel — floor plus two side walls — running back
-49.3 mm. Two continuous ribs at the PCB's mounting-hole X positions run the
+48.2 mm. Two continuous ribs at the PCB's mounting-hole X positions run the
 whole length of the tray and carry the M2 inserts the board screws down to.
 
-Overall: **36 × 30 × 49.3 mm**.
+Overall: **36 × 30 × 48.2 mm**.
 
 ### Two sets of brass heat-set inserts
 
@@ -58,11 +58,11 @@ that height is set by the 3 mm of header solder tail hanging under the board.
 Where the board is allowed to touch is driven by what hangs below it. The
 magjack's heat-staked pegs and their solder joints span up to ~15.3 mm, so the
 seating ribs start at X ±9.6, leaving a 19.2 mm clear channel — 1.95 mm of
-margin each side. Only a short pad at each screw position (Z 4–10.4, forward
+margin each side. Only a short pad at each screw position (Z 4–9.3, forward
 of the pegs) reaches inboard to ±7.8 to give the M2 bore a 0.76 mm collar.
 Under the header the ribs are cut away to the floor entirely, so it makes no
 difference exactly where the header pads sit; the board is supported for its
-first 33 mm and cantilevers the last 11 mm, which 1 mm FR4 handles fine.
+first 32 mm and cantilevers the last 11 mm, which 1 mm FR4 handles fine.
 
 ## The module
 
@@ -77,8 +77,12 @@ Measured off the board with calipers. It is an imperial design — 1″ wide,
 | Under the board | 3 mm of solder tail to clear |
 | 2×8 header | rear edge, 0.1″ pitch, pins stand 7.62 mm (0.3″) proud |
 
-The magjack overhangs 5.08 mm and the front slab is 4.0 mm, so the connector
-face ends up **1.08 mm proud** of the flange and noses into the fascia cut-out.
+The board is pushed forward until its front edge butts the back face of the
+flange slab at Z = 4.0 — that is its only hard stop, so it is where the board
+actually sits. The magjack overhangs 5.08 mm against a 4.0 mm slab, so the
+connector face ends up **1.08 mm proud** of the flange and noses into the
+fascia cut-out. Screw positions are measured from that seated position, so
+`pcb_front_z` must equal `front_t`; there is an assert on it.
 
 ## Print the coupon first
 
