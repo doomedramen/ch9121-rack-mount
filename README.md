@@ -10,7 +10,7 @@ dupont jumpers.
 | `ch9121_mount.scad` | Parametric OpenSCAD source. Every dimension is a named variable at the top. |
 | `ch9121_carrier.stl` | Printable export. Manifold, genus 3 (RJ45 opening + 2 flange screw holes). |
 | `ch9121_coupon.stl` | **Print this first.** The front 14 mm of the part only — a few minutes on the bed, and it tells you whether the board's screw holes and the magjack actually line up before you commit. |
-| `ch9121_fascia_stencil.stl` | 2 mm flat plate for marking the fascia: flange outline, the 18 × 15.5 opening, and the two M2 holes. Hold it on the panel, mark or drill through, cut the opening to the line. Symmetric both ways so it can't go on backwards. |
+| `ch9121_fascia_stencil.stl` | 2 mm flat plate for marking the fascia: flange outline, the 17.6 × 15.3 opening, and the two M2 holes. Hold it on the panel, mark or drill through, cut the opening to the line. Symmetric both ways so it can't go on backwards. |
 | `renders/` | `iso.png` (into the tray), `fit.png` (with the module as reference geometry), `flange.png` (front elevation). |
 
 ## Design
@@ -36,7 +36,7 @@ M2 insert bosses, then a U-channel — floor plus two side walls — running bac
 49.3 mm. Two continuous ribs at the PCB's mounting-hole X positions run the
 whole length of the tray and carry the M2 inserts the board screws down to.
 
-Overall: **36 × 28 × 49.3 mm**.
+Overall: **36 × 30 × 49.3 mm**.
 
 ### Two sets of brass heat-set inserts
 
@@ -91,11 +91,14 @@ screw holes, the RJ45 opening. Sit the board against it and check the two
 screw holes line up and the magjack drops into the opening. That's the whole
 risk, and it costs a few minutes of filament instead of a two-hour print.
 
-The RJ45 opening is deliberately loose — 18.5 × 16.5 around a 16 × 12.7
-connector, so 1.25 mm clearance on width and 1.9 mm on height. It sits behind
-the fascia so the gap is invisible, and the slack means a couple of
-millimetres of error in `rj45_body_h`, `standoff_h` or `pcb_t` still leaves
-the connector lined up.
+The RJ45 opening started deliberately loose and has been closed up over two
+coupon prints. It now sits at **16.8 × 14.5** — 0.4 mm per side on width
+(`rj45_clear_x`), 0.9 mm per side on height (`rj45_clear_y`) — and the whole
+opening is lifted 1 mm by `rj45_y_trim`, because the connector sits that much
+higher than `pcb_top_y + rj45_body_h/2` predicts.
+
+If you ever change `rj45_body_h`, `standoff_h` or `pcb_t`, open both clearances
+back out to ~1.5 and re-print the coupon before committing to a full part.
 
 ## Still to confirm
 
@@ -148,7 +151,7 @@ visual fit check. Leave it `false` when exporting.
 1. Measure the module and update the `VERIFY` variables.
 2. Print a test copy and dry-fit before pressing any inserts in.
 3. Print `ch9121_fascia_stencil.stl`, hold it on the panel, mark through it,
-   and cut. That's the 18.0 × 15.5 mm opening (`rack_hole_w` / `rack_hole_h`)
-   plus two M2 clearance holes at 28 mm spacing. The opening also has to clear
-   the 1.08 mm of magjack that stands proud of the flange — it does, with
-   1.0 mm to spare on width and 1.4 mm on height.
+   and cut. That's a 17.6 × 15.3 mm opening (`rack_hole_w` / `rack_hole_h`,
+   derived from the printed opening plus 0.4 mm per side) plus two M2
+   clearance holes at 28 mm spacing. It clears the 1.08 mm of magjack that
+   stands proud of the flange with 0.8 mm to spare all round.

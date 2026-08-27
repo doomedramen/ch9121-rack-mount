@@ -89,10 +89,9 @@ rear_rib_relief = 11.0;
 // ---------------------------------------------------------------------------
 // 2. RACK FASCIA HAND-CUT OPENING (reference only, you cut this by hand)
 // ---------------------------------------------------------------------------
-// Cut by hand, so it gets more slack than the printed opening.
-rack_hole_clear = 0.8;   // per side
-rack_hole_w = rj45_body_w + 2*rack_hole_clear;   // = 17.6
-rack_hole_h = rj45_body_h + 2*rack_hole_clear;   // = 14.3
+// NOTE: rack_hole_w / rack_hole_h are defined in section 3, below the printed
+// opening they derive from. OpenSCAD does not resolve forward references in
+// top-level expressions, so the order matters.
 
 // Marking stencil: a flat plate with the same outline as the flange, the
 // fascia opening, and the two screw holes. Hold it on the panel, mark or
@@ -103,15 +102,24 @@ stencil_pilot_d = 2.4;   // M2 clearance, so an M2 drill can guide through it
 // ---------------------------------------------------------------------------
 // 3. CARRIER RJ45 OPENING (printed, tighter than the hand-cut hole)
 // ---------------------------------------------------------------------------
-// Snug now that the coupon print has confirmed the connector lines up. If you
-// ever change rj45_body_h / standoff_h / pcb_t, open this back out to ~1.5 and
-// re-print the coupon before committing to a full part.
-rj45_clear     = 0.4;    // per side
-carrier_rj45_w = rj45_body_w + 2*rj45_clear;   // = 16.8
-carrier_rj45_h = rj45_body_h + 2*rj45_clear;   // = 13.5
+// Set from two coupon prints. Width at 0.4 per side fitted; height needed
+// another 0.5 per side, and the whole opening needed to come up 1mm. If you
+// ever change rj45_body_h / standoff_h / pcb_t, open these back out to ~1.5
+// and re-print the coupon before committing to a full part.
+rj45_clear_x   = 0.4;    // per side
+rj45_clear_y   = 0.9;    // per side
+carrier_rj45_w = rj45_body_w + 2*rj45_clear_x;   // = 16.8
+carrier_rj45_h = rj45_body_h + 2*rj45_clear_y;   // = 14.5
+
+// The hand-cut fascia opening, derived from the printed one rather than from
+// the connector, because the printed one is what has actually been test
+// fitted. Cut by hand, so it gets a little more slack again.
+rack_hole_clear = 0.4;   // per side, on top of the printed opening
+rack_hole_w = carrier_rj45_w + 2*rack_hole_clear;   // = 17.6
+rack_hole_h = carrier_rj45_h + 2*rack_hole_clear;   // = 15.3
 carrier_rj45_r = 0.8;
-rj45_y_trim    = 0;     // nudge the opening up/down if the magjack does not
-                         // sit where rj45_body_h says it does          VERIFY
+rj45_y_trim    = 1.0;   // measured off a coupon print: the connector sits 1mm
+                         // higher than pcb_top_y + rj45_body_h/2 predicts
 
 // ---------------------------------------------------------------------------
 // 4. TRAY
@@ -137,7 +145,8 @@ tray_tail        = 1.0;   // floor overrun past the PCB rear edge
 // ---------------------------------------------------------------------------
 front_t  = 4.0;    // MUST be < rj45_overhang - see assert below
 flange_w = 36.0;
-flange_h = 28.0;
+flange_h = 30.0;   // tall enough to still reach below the tray floor
+                    // now that the opening has moved up
 
 include_flange_screws = true;
 flange_hole_spacing_x = 28.0;
@@ -388,6 +397,8 @@ module reference_module() {
 part       = "carrier";
 coupon_len = 14.0;
 
+assert(is_num(rack_hole_w) && is_num(rack_hole_h),
+       "rack_hole_* is undef - a top-level forward reference crept back in");
 assert(part == "carrier" || part == "coupon" || part == "stencil",
        "part must be \"carrier\", \"coupon\" or \"stencil\"");
 
