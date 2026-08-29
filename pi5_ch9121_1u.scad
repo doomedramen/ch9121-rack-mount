@@ -17,7 +17,8 @@
 // The carrier's two PCB inserts still press in from the tray underside,
 // which stays open below.
 //
-// Layout, viewed from the FRONT of the rack, left to right:
+// Layout of the EMITTED (mirrored) part, viewed from the FRONT of the
+// rack, left to right:
 //   1. open cable bay   - the Pi's USB-C power and the micro-HDMI -> HDMI
 //                         adapter exit sideways (viewer's left) into ~110mm
 //                         of open space
@@ -27,9 +28,18 @@
 //                         faces it, so the dupont run is short.
 //
 // Axes (same convention as ch9121_mount.scad):
-//   X = left / right, 0 at panel centre (+X = viewer's right)
+//   X = left / right, 0 at panel centre
 //   Y = up / down,    0 at panel centre
 //   Z = front -> back, 0 at the exterior face of the fascia
+//
+// HANDEDNESS - READ BEFORE TRUSTING ANY LEFT/RIGHT BELOW. For a viewer
+// standing at the FRONT of the rack (looking along +Z, up +Y), viewer-right
+// is -X. This file is AUTHORED in the mirror frame (+X = viewer-LEFT,
+// where a physical Pi's layout constants read naturally), and the final
+// assembly emits mirror([1,0,0]) of everything, producing the physical
+// part. A physical Pi 5 with ports facing front and cooler up has its
+// power/HDMI edge on the viewer's LEFT and GPIO on the viewer's RIGHT -
+// the mirrored output honours that; the raw authored model does not.
 //
 // >>> Dimensions marked "VERIFY" are read off the reference STL / OBJ models,
 // >>> not a datasheet. Check before a production print.
@@ -107,9 +117,11 @@ fan_lug_below     = 2.5;   // clip protrusion below the PCB underside VERIFY
 // ---------------------------------------------------------------------------
 // 3. LAYOUT
 // ---------------------------------------------------------------------------
-// Pi bay. The board lies flat, component side up. Its power/HDMI edge is the
-// -X (viewer's left) side; USB/Ethernet face front. Board left edge:
-pi_left_x  = 7.0;                       // panel X of the power/HDMI edge
+// Pi bay. The board lies flat, component side up, USB/Ethernet facing
+// front. In this AUTHORED frame the power/HDMI edge is the low-X side of
+// the bay; the output mirror puts it on the physical viewer's LEFT, exiting
+// into the open cable bay, with GPIO facing the carrier:
+pi_left_x  = 7.0;                       // authored X of the power/HDMI edge
 pi_cx      = pi_left_x + pi_w/2;        // = 35
 // Vertical: the PCB sits a full board thickness LOWER than the opening
 // implies - the opening's bottom edge lands 0.25 below the PCB TOP face
@@ -377,8 +389,12 @@ coupon_len = 14.0;
 assert(part == "panel" || part == "coupon",
        "part must be \"panel\" or \"coupon\"");
 
+// The mirror maps the authored frame onto the physical part - see the
+// HANDEDNESS note in the header. Everything the panel unions is width-
+// symmetric (Pi hole pattern, cooler lugs, the carrier itself), so only the
+// LAYOUT flips: cables end up exiting the physical viewer's left.
 if (part == "coupon")
-    intersection() {
+    mirror([1, 0, 0]) intersection() {
         panel();
         translate([pi_left_x - 12, -panel_h/2 - 1, -1])
             cube([(ch_cx + flange_w/2 + 7) - (pi_left_x - 12),
@@ -386,6 +402,6 @@ if (part == "coupon")
                                                    // the ear slots at 112.5
     }
 else
-    panel();
+    mirror([1, 0, 0]) panel();
 
-if (show_reference && part == "panel") reference_pi5();
+if (show_reference && part == "panel") mirror([1, 0, 0]) reference_pi5();

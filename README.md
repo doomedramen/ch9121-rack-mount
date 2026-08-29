@@ -218,6 +218,13 @@ looser hand-cut stencil hole. All carrier dimensions stay in
 | `pi5_ch9121_1u_coupon.stl` | Front 14 mm slice — checks the Pi port opening and the CH9121 board alignment before a full print. |
 | `renders/panel_*.png` | `iso`, `fit` (Pi / cooler / adapter / CH9121 ghosts), `front`. |
 
+*A subtlety for anyone editing the source: the model is authored in a
+mirrored frame (+X = the front viewer's **left**) and the final assembly
+emits `mirror([1,0,0])` of everything — that mirror is what puts the Pi's
+power/HDMI edge on the open-bay side. A Pi with ports facing front and
+cooler up has its power edge on the viewer's left; there is no way to flip
+it without pointing the ports backwards or the cooler down.*
+
 **Layout, viewed from the front, left → right:**
 
 1. **Open cable bay** (~110 mm) — the Pi's USB-C power and micro-HDMI → HDMI
