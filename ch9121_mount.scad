@@ -441,26 +441,35 @@ part       = "carrier";
 coupon_len = 14.0;
 cutter_len = 40.0;
 
+// Set false by files that `include` this one for its variables and modules
+// (pi5_ch9121_1u.scad does) - it suppresses the standalone render below, and
+// the includer's own `part` value then never has to satisfy this file's
+// assert.
+ch9121_standalone = true;
+
 assert(is_num(rack_hole_w) && is_num(rack_hole_h),
        "rack_hole_* is undef - a top-level forward reference crept back in");
-assert(part == "carrier" || part == "coupon" || part == "stencil"
-       || part == "cutter",
-       "part must be \"carrier\", \"coupon\", \"stencil\" or \"cutter\"");
 
 // ============================================================================
 // FINAL ASSEMBLY
 // ============================================================================
-if (part == "stencil")
-    fascia_stencil();
-else if (part == "cutter")
-    cube([carrier_rj45_w, carrier_rj45_h, cutter_len], center = true);
-else if (part == "coupon")
-    intersection() {
-        ch9121_carrier();
-        translate([-flange_w, flange_y0 - 1, -1])
-            cube([2*flange_w, flange_h + 2, coupon_len + 1]);
-    }
-else
-    ch9121_carrier();
+if (ch9121_standalone) {
+    assert(part == "carrier" || part == "coupon" || part == "stencil"
+           || part == "cutter",
+           "part must be \"carrier\", \"coupon\", \"stencil\" or \"cutter\"");
 
-if (show_reference && part != "stencil") reference_module();
+    if (part == "stencil")
+        fascia_stencil();
+    else if (part == "cutter")
+        cube([carrier_rj45_w, carrier_rj45_h, cutter_len], center = true);
+    else if (part == "coupon")
+        intersection() {
+            ch9121_carrier();
+            translate([-flange_w, flange_y0 - 1, -1])
+                cube([2*flange_w, flange_h + 2, coupon_len + 1]);
+        }
+    else
+        ch9121_carrier();
+
+    if (show_reference && part != "stencil") reference_module();
+}

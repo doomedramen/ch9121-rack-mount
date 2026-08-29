@@ -1,5 +1,9 @@
 # CH9121 UART-to-Ethernet Rack Panel Carrier
 
+> **Also in this repo:** [`pi5_ch9121_1u.scad`](pi5_ch9121_1u.scad) — a 1U
+> 10-inch rack panel that holds one Raspberry Pi 5 and this carrier. See
+> [the panel section](#1u-panel-raspberry-pi-5--carrier) at the bottom.
+
 A rear-mounted 3D-printable **open tray** that holds a CH9121 UART-to-Ethernet
 module behind a hand-cut opening in a Raspberry Pi rack fascia. The board's
 2×8 pin header stays fully exposed so it can be wired to the Pi's GPIO with
@@ -192,3 +196,71 @@ just enters open air behind.
    clears the 1.08 mm of magjack standing proud of the flange with 0.8 mm to
    spare all round.
 6. Screw the carrier to the fascia, then the board into the tray.
+
+---
+
+## 1U panel: Raspberry Pi 5 + carrier
+
+`pi5_ch9121_1u.scad` is a 254 × 44.5 mm 10-inch-rack 1U panel adapted from the
+reference mounts in `pi_references/`. **The carrier is part of the print**: the
+panel `include`s `ch9121_mount.scad` and unions `ch9121_carrier()` onto the
+back of the fascia, flange face flush with the panel front. The carrier's two
+flange screws and bosses are dropped (`include_flange_screws = false`) — there
+is nothing to screw to when the flange grows out of the panel — and the fascia
+carries the carrier's own test-fitted 16.8 × 14.5 opening rather than the
+looser hand-cut stencil hole. All carrier dimensions stay in
+`ch9121_mount.scad`; there is one source of truth.
+
+| File | Purpose |
+|---|---|
+| `pi5_ch9121_1u.scad` | Parametric source. Pi 5 dimensions verified against the official mechanical drawing. |
+| `pi5_ch9121_1u.stl` | The panel. Manifold, genus 8 (4 ear slots, Pi port opening, RJ45 tunnel, 2 carrier board bores). |
+| `pi5_ch9121_1u_coupon.stl` | Front 14 mm slice — checks the Pi port opening and the CH9121 board alignment before a full print. |
+| `renders/panel_*.png` | `iso`, `fit` (Pi / cooler / adapter / CH9121 ghosts), `front`. |
+
+**Layout, viewed from the front, left → right:**
+
+1. **Open cable bay** (~110 mm) — the Pi's USB-C power and micro-HDMI → HDMI
+   adapter exit sideways into this space. The adapter plus a mated full-size
+   HDMI plug needs ~75 mm; there is ~110.
+2. **Pi 5 bay** — board flat, Active Cooler up, USB/Ethernet through the
+   fascia (flush: the ports overhang 3.0 mm against a 3 mm fascia, per the
+   official drawing), SD card reachable from the rear. The board sits on two
+   full-length rails rooted in the fascia, on four **M2.5** heat-set inserts
+   (bore 3.5, pressed in from above), screwed with **M2.5×6** through the
+   Pi's corner holes. The Active Cooler uses its own two dedicated holes, so
+   the corners stay free. Those cooler holes sit 6 mm inboard of the rail
+   lines at exactly the insert positions (official drawing: 6 mm from the
+   GPIO-corner and USB-C-corner mounting holes), and the cooler's spring
+   pins clip **through** the board and flare ~2.5 mm below it — so the rails
+   sit asymmetrically about their hole lines (2.75 inboard / 4.25 outboard),
+   leaving the clips in free air with 0.25 mm to spare at a 6 mm flare.
+   Asserts guard both the clip clearance and the insert-bore wall.
+3. **CH9121 station** — the carrier, printed in place, RJ45 centred at X +85.
+   Its board inserts still press in from the tray underside, which stays open
+   below. The Pi's GPIO edge faces it, so the dupont run to the header is
+   short.
+
+Cooler headroom: PCB top sits at Y −5.9, cooler reaches ~+10.1 against a
++22.25 panel edge. HDMI adapter body reaches ~3 mm below the PCB underside;
+the tray floor is 7.5 mm below it.
+
+**Printing:** fascia face down, same as the carrier — everything grows
+straight back, no supports. Rotate 45° on the bed if the 254 mm width does
+not fit square; the orientation relative to the bed normal is what matters.
+
+```bash
+OS=/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD
+$OS --backend=manifold -o pi5_ch9121_1u.stl        pi5_ch9121_1u.scad
+$OS --backend=manifold -o pi5_ch9121_1u_coupon.stl -D 'part="coupon"' pi5_ch9121_1u.scad
+```
+
+Hardware for the whole panel: **4 × M2.5 heat-set inserts (3.5 mm bore —
+VERIFY yours) + 4 × M2.5×6 screws** for the Pi, and **2 × M2 inserts +
+2 × M2×6** for the CH9121 board (pressed from the tray underside, exactly as
+on the standalone carrier). The carrier's flange inserts and screws are not
+used — the flange is printed into the panel.
+
+There is also `ch9121_rj45_cutter.stl` — a plain 16.8 × 14.5 × 40 cuboid of
+the test-fitted RJ45 opening, centred on the origin, for subtracting the same
+opening from any other model (`part="cutter"` in `ch9121_mount.scad`).
