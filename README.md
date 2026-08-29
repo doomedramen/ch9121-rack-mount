@@ -241,9 +241,14 @@ looser hand-cut stencil hole. All carrier dimensions stay in
    below. The Pi's GPIO edge faces it, so the dupont run to the header is
    short.
 
-Cooler headroom: PCB top sits at Y −5.9, cooler reaches ~+10.1 against a
-+22.25 panel edge. HDMI adapter body reaches ~3 mm below the PCB underside;
-the tray floor is 7.5 mm below it.
+The board seats a full PCB thickness lower than the opening implies: the
+opening's bottom edge lands 0.25 mm below the PCB **top** face, so the board
+nose hides behind the fascia and butts it as a full-width hard stop — only
+the ports pass through. The spare ~1.85 mm of opening height sits above the
+ports and absorbs any error in the port-stack height. Cooler headroom: PCB
+top sits at Y −7.5, cooler reaches ~+6.2 against a +22.25 panel edge. HDMI
+adapter body reaches ~3 mm below the PCB underside; the tray floor is
+5.9 mm below it.
 
 **Printing:** fascia face down, same as the carrier — everything grows
 straight back, no supports. Rotate 45° on the bed if the 254 mm width does

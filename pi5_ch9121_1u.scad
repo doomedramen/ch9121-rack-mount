@@ -111,17 +111,23 @@ fan_lug_below     = 2.5;   // clip protrusion below the PCB underside VERIFY
 // -X (viewer's left) side; USB/Ethernet face front. Board left edge:
 pi_left_x  = 7.0;                       // panel X of the power/HDMI edge
 pi_cx      = pi_left_x + pi_w/2;        // = 35
-// Vertical: same seating as the reference panel - opening centre at Y ~ 1.
-pi_bot_y   = -7.5;                      // PCB underside
-pi_top_y   = pi_bot_y + pi_t;
+// Vertical: the PCB sits a full board thickness LOWER than the opening
+// implies - the opening's bottom edge lands 0.25 below the PCB TOP face
+// (the port undersides), not below the PCB. The board nose hides behind
+// the fascia and butts it as a full-width hard stop; only the top 0.25 of
+// the PCB edge shows in the opening.
+pi_bot_y   = -9.1;                      // PCB underside
+pi_top_y   = pi_bot_y + pi_t;           // = -7.5, port undersides
 
-// Fascia opening for the port stack: the reference uses 53.3 x 17.1 (the
-// exact PCB + port stack); 0.25mm is added per side here.
+// Fascia opening for the port stack. Height keeps the reference panel's
+// PCB+ports stack (17.1) plus clearance even though the PCB no longer
+// passes through it - the spare ~1.85 sits ABOVE the ports and absorbs any
+// error in pi_port_h, which is measured off the OBJ, not the datasheet.
 pi_open_clear = 0.25;
 pi_open_w  = (pi_port_x1 - pi_port_x0) + 2.7 + 2*pi_open_clear;  // ref 53.3+
 pi_open_h  = pi_t + pi_port_h + 2*pi_open_clear;                 // ref 17.1+
 pi_open_cx = pi_left_x + (pi_port_x0 + pi_port_x1)/2;            // = 34.7
-pi_open_cy = pi_bot_y - pi_open_clear + pi_open_h/2;             // ~ 1.05
+pi_open_cy = pi_top_y - pi_open_clear + pi_open_h/2;             // ~ 1.05
 pi_open_r  = 0.8;
 
 // ch9121 station: where the carrier's RJ45 opening centre lands on the
@@ -186,6 +192,10 @@ assert(pi_screw_len - pi_t >= 3.0,
 assert(pi_open_cx - pi_open_w/2 > pi_left_x - 2.0 &&
        pi_open_cx + pi_open_w/2 < pi_left_x + pi_w + 2.0,
        "Pi port opening strays past the board envelope");
+assert(pi_top_y + pi_port_h + 0.25 <= pi_open_cy + pi_open_h/2,
+       "port stack does not clear the top of the fascia opening");
+assert(pi_top_y - pi_open_clear >= pi_bot_y,
+       "fascia opening dips below the PCB underside - the front stop is gone");
 assert(ch_cx - flange_w/2 > pi_left_x + pi_w + 2.0,
        "ch9121 flange overlaps the Pi bay - GPIO edge needs clearance");
 assert(ch_cx + flange_w/2 < panel_w/2 - 8.0,
