@@ -429,20 +429,31 @@ module reference_module() {
 //               does the magjack line up with the opening. Dry-fit the board
 //               against it before committing, or pressing any inserts in.
 //   "stencil" - flat plate for marking and cutting the fascia
+//   "cutter"  - plain cuboid at the test-fitted RJ45 opening size
+//               (carrier_rj45_w x carrier_rj45_h), 40mm deep, centred on the
+//               origin. Not for printing: import it into another model and
+//               subtract it to reproduce this opening there. Square-cornered
+//               on purpose - the carrier's own opening has r=0.8 corners, but
+//               a square hole of the same w x h clears everything the rounded
+//               one does.
 // ============================================================================
 part       = "carrier";
 coupon_len = 14.0;
+cutter_len = 40.0;
 
 assert(is_num(rack_hole_w) && is_num(rack_hole_h),
        "rack_hole_* is undef - a top-level forward reference crept back in");
-assert(part == "carrier" || part == "coupon" || part == "stencil",
-       "part must be \"carrier\", \"coupon\" or \"stencil\"");
+assert(part == "carrier" || part == "coupon" || part == "stencil"
+       || part == "cutter",
+       "part must be \"carrier\", \"coupon\", \"stencil\" or \"cutter\"");
 
 // ============================================================================
 // FINAL ASSEMBLY
 // ============================================================================
 if (part == "stencil")
     fascia_stencil();
+else if (part == "cutter")
+    cube([carrier_rj45_w, carrier_rj45_h, cutter_len], center = true);
 else if (part == "coupon")
     intersection() {
         ch9121_carrier();
