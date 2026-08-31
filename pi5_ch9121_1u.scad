@@ -107,9 +107,9 @@ cooler_h = 16.0;
 // SIDE - one 6mm below the GPIO-corner hole (board 61.5, 46.5), one 6mm
 // above the USB-C-corner hole (board 3.5, 9.5). The pins clip THROUGH the
 // board and flare ~2.5mm below it. They land 6mm inboard of the rail
-// centrelines at exactly the insert Z positions, which is why the rails sit
-// asymmetrically about their hole lines (rail_in below): a centred 7mm rail
-// would catch the clips and rock the board.
+// centrelines at exactly the insert Z positions, which caps how far a rail
+// may reach inboard (rail_half below): a 7mm rail would catch the clips and
+// rock the board.
 fan_lug_from_hole = 6.0;   // inboard of the corner hole, along board width
 fan_lug_d         = 6.0;   // clip flare diameter under the board     VERIFY
 fan_lug_below     = 2.5;   // clip protrusion below the PCB underside VERIFY
@@ -157,13 +157,15 @@ ch_cy = pi_open_cy;    // visually level with the Pi opening
 // rails together underneath; the ~7.5mm between floor and board keeps the
 // floor clear of the HDMI adapter's body, which reaches ~3mm below the PCB
 // underside when plugged in.
-// Rails are 7mm wide but sit asymmetrically about their hole lines: 2.75mm
-// inboard, 4.25mm outboard. The cooler's spring-pin clips flare to
-// ~fan_lug_d, centred 6mm inboard of the hole lines - the inboard face at
-// 2.75 clears a 6mm clip by 0.25, while still leaving the insert bore a
-// 1.0mm wall (the carrier gets by with 0.76).
-rail_in       = 2.75;                   // rail reach inboard of the hole line
-rail_out      = 4.25;                   // rail reach outboard
+// Rails are CENTRED on their hole lines - an off-centre bore leaves unequal
+// wall around the insert and the iron drifts toward the thin side going in.
+// Width is set by the inboard limit: the cooler's spring-pin clips flare to
+// ~fan_lug_d, centred 6mm inboard of the hole lines, so a face at 2.75
+// clears a 6mm clip by 0.25. Mirrored outboard that makes a 5.5mm rail with
+// a 1.0mm wall all round the bore (the carrier gets by with 0.76).
+rail_half     = 2.75;                   // rail reach each side of the hole line
+rail_in       = rail_half;              // inboard reach (clip clearance)
+rail_out      = rail_half;              // outboard reach
 rail_top_y    = pi_bot_y;               // Pi seats here
 pi_floor_top_y = -15.0;
 pi_floor_t     = 3.0;
@@ -235,6 +237,8 @@ assert(rail_in <= fan_lug_from_hole - fan_lug_d/2,
        "rail inboard face catches the cooler's under-board clips");
 assert(rail_in - pi_insert_d/2 >= 0.7,
        "insert bore wall too thin on the rail's inboard side");
+assert(rail_in == rail_out,
+       "rail not centred on its hole line - insert bore would sit off-centre");
 assert(fan_lug_below < rail_h,
        "cooler clips reach below the rail height into the floor");
 
@@ -281,12 +285,11 @@ module pi_tray() {
         cube([pi_floor_x1 - pi_floor_x0, pi_floor_t,
               pi_floor_end_z - fascia_t]);
 
-    // rails, asymmetric about their hole lines (inboard = toward the board
-    // centre at pi_cx) so the cooler's under-board clips clear them
+    // rails, centred on their hole lines so each insert bore sits in the
+    // middle of the rail; width is capped by the cooler's under-board clips
     for (x = rail_cx)
-        translate([x < pi_cx ? x - rail_out : x - rail_in,
-                   pi_floor_top_y, fascia_t])
-            cube([rail_in + rail_out, rail_h, rail_end_z - fascia_t]);
+        translate([x - rail_half, pi_floor_top_y, fascia_t])
+            cube([2*rail_half, rail_h, rail_end_z - fascia_t]);
 
     // under-floor gussets tying the tray back to the fascia. Right-angle
     // triangles in the YZ plane - the hypotenuse prints at 45 degrees.

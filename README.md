@@ -239,10 +239,12 @@ it without pointing the ports backwards or the cooler down.*
    the corners stay free. Those cooler holes sit 6 mm inboard of the rail
    lines at exactly the insert positions (official drawing: 6 mm from the
    GPIO-corner and USB-C-corner mounting holes), and the cooler's spring
-   pins clip **through** the board and flare ~2.5 mm below it — so the rails
-   sit asymmetrically about their hole lines (2.75 inboard / 4.25 outboard),
-   leaving the clips in free air with 0.25 mm to spare at a 6 mm flare.
-   Asserts guard both the clip clearance and the insert-bore wall.
+   pins clip **through** the board and flare ~2.5 mm below it — which caps
+   how far a rail may reach inboard at 2.75 mm (0.25 mm to spare at a 6 mm
+   flare). The rails are **centred** on their hole lines at that reach, 5.5 mm
+   wide, so each insert bore sits mid-rail with a 1.0 mm wall all round and
+   the iron goes in straight. Asserts guard the clip clearance, the
+   insert-bore wall, and the rails being centred.
 3. **CH9121 station** — the carrier, printed in place, RJ45 centred at X +85.
    Its board inserts still press in from the tray underside, which stays open
    below. The Pi's GPIO edge faces it, so the dupont run to the header is
