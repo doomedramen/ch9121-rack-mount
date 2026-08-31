@@ -31,8 +31,20 @@ $fn = 48;
 // never removes material that matters.
 eps = 0.01;
 
+// Elephant's foot relief. Both parts print with their front face flat on the
+// bed, so that face's first layer squashes outward - which makes every
+// opening through it come out UNDER size at the very front. A 45-degree
+// lead-in over the first bed_relief_h of Z gives the squeeze-out somewhere to
+// go. It only ever removes material, so it cannot tighten a fit that was
+// dialled in on a test print.
+bed_relief   = 0.3;   // how much wider the opening is at the bed face
+bed_relief_h = 0.3;   // over how much Z it tapers back to nominal
+
 // ---------------------------------------------------------------------------
-// 1. THE MODULE  (measured off the seller dimension drawing: 43.00 x 25.50mm)
+// 1. THE MODULE  (measured off the board with calipers)
+// It is an imperial design: 1.00in wide, 1.70in long, holes inset 0.10in,
+// 0.1in header pitch. Retail listings widely repeat "43 x 23 x 14.5mm" - the
+// 23 is simply wrong, and the caliper measurement is what is used here.
 // ---------------------------------------------------------------------------
 pcb_l = 43.18;   // PCB length, front (RJ45) edge to rear (header) edge
                   // measured, 1.7 inch (excludes the magjack overhang)
@@ -268,6 +280,21 @@ module rounded_rect_prism(w, h, r, z0, z1) {
     square([w, h], center = true);
 }
 
+// A cutter for an opening through a bed-face wall: nominal size all the way
+// through, but flaring to bed_relief wider over the first bed_relief_h so
+// the first layer's squeeze-out has somewhere to go. Cuts from below z=0 to
+// past z1 - size it to the wall you are cutting.
+module bed_relieved_opening(w, h, r, z1) {
+    hull() {
+        translate([0, 0, -0.5])
+            rounded_rect_prism(w + 2*bed_relief, h + 2*bed_relief,
+                               r + bed_relief, 0, 0.5);
+        translate([0, 0, bed_relief_h])
+            rounded_rect_prism(w, h, r, 0, eps);
+    }
+    rounded_rect_prism(w, h, r, bed_relief_h, z1 + 0.5);
+}
+
 function flange_hole_positions() =
     [[-flange_hole_spacing_x/2, rj45_cy], [flange_hole_spacing_x/2, rj45_cy]];
 
@@ -292,10 +319,12 @@ module flange() {
                         cube([flange_boss_w, flange_boss_w, flange_boss_h]);
         }
 
-        // RJ45 clearance, straight through
-        translate([0, rj45_cy, -0.5])
-            rounded_rect_prism(carrier_rj45_w, carrier_rj45_h, carrier_rj45_r,
-                               0, front_t + flange_boss_h + 1);
+        // RJ45 clearance, straight through, with the bed-face lead-in. The
+        // through size stays the test-fitted 16.8 x 14.5 - the relief only
+        // opens up the first layer or two.
+        translate([0, rj45_cy, 0])
+            bed_relieved_opening(carrier_rj45_w, carrier_rj45_h,
+                                 carrier_rj45_r, front_t + flange_boss_h);
 
         // heat-set insert bore, open at the FRONT face (the insert goes in from
         // the panel side, the screw threads into it from the panel side too),

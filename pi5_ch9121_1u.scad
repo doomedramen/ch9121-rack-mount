@@ -1,8 +1,22 @@
 // ============================================================================
 // 1U 10-INCH RACK PANEL  --  ONE RASPBERRY PI 5  +  CH9121 CARRIER, ONE PIECE
 //
+// SOURCES for the numbers in section 2. Anything not traceable to one of
+// these is measured off the reference OBJ and tagged VERIFY at its
+// definition:
+//   Pi 5 board + ports:
+//     https://datasheets.raspberrypi.com/rpi5/raspberry-pi-5-mechanical-drawing.pdf
+//     85 x 56 board, 2.7mm corner holes on a 58 x 49 pattern, 3.0mm port
+//     overhang. (Beware: 58 is the HOLE SPACING, not the board width.)
+//   Active Cooler:
+//     https://datasheets.raspberrypi.com/cooling/raspberry-pi-active-cooler-mechanical-drawing.pdf
+//     13.7mm tall over the PCB. It does NOT dimension the push-pin holes or
+//     the under-board clip - see the fan_lug notes below.
+//   Rack: 10-inch racks are a de-facto format, but reuse EIA-310's vertical
+//     geometry - 1.75in U, ear slots 1.25in apart.
+//
 // Adapted from "RPi 2B/3B/4B/5B 10-inch Rack Mount V1_2" (pi_references/):
-// same 254 x 44.5 x 3 fascia, same rack-ear slots, same print concept -
+// same 254 x 3 fascia, same rack-ear slots, same print concept -
 // fascia face down on the bed, everything grows straight back in +Z, nothing
 // overhangs in -Z, no supports. Print rotated 45 degrees on the bed if the
 // plate does not fit square - the orientation relative to the bed NORMAL is
@@ -59,13 +73,21 @@ include_flange_screws = false;
 // ---------------------------------------------------------------------------
 // 1. PANEL / RACK  (measured off the reference 10-inch rack mount STL)
 // ---------------------------------------------------------------------------
+// 10-inch racks are a de-facto convention rather than a standards-body
+// format, but they reuse EIA-310's vertical geometry: the U pitch is
+// 1.75in = 44.45mm, split 0.5in / 0.625in / 0.625in, which is what puts the
+// two ear slots 1.25in = 31.75mm apart (ear_slot_cy below).
+rack_u    = 44.45;   // one rack unit, EIA-310
 panel_w   = 254.0;   // 10-inch rack panel width
-panel_h   = 44.5;    // 1U
+// A panel has to be UNDER the U pitch, not equal to it, or it binds against
+// its neighbours. 44.0 is the usual real-world 1U panel height and leaves
+// ~0.2mm top and bottom. (This was 44.5 - taller than the U it sits in.)
+panel_h   = 44.0;
 fascia_t  = 3.0;
 panel_r   = 2.0;     // outer corner radius
 
 ear_slot_cx = 119.0;  // slot centres, +/-X            (reference: 119.06)
-ear_slot_cy = 15.9;   // slot centres, +/-Y
+ear_slot_cy = 15.875; // slot centres, +/-Y: EIA-310 puts them 1.25in apart
 ear_slot_w  = 13.0;   // slot length (X)
 ear_slot_h  = 6.5;    // slot width  (Y), ends fully rounded
 
@@ -113,6 +135,9 @@ pi_screw_len    = 6.0;   // M2.5x6, length under the head
 // at the board's seating plane. Left flush, an insert that ends up even
 // slightly proud lifts the Pi onto four rims and it rocks. Sinking the bore
 // mouth by this much gives a proud insert somewhere to go.
+// 4.0 is about the OD of a common M2.5 insert, which is the size that has to
+// fit. If yours are fatter, this has to grow with them - and the rail cannot
+// give much, so check the wall assert below rather than just widening it.
 pi_insert_relief_d = 4.0;   // wider than the insert, to clear a flared knurl
 pi_insert_relief_h = 0.3;   // deeper than an insert is likely to sit proud
 
@@ -129,9 +154,19 @@ cooler_h = 16.0;
 // centrelines at exactly the insert Z positions, which caps how far a rail
 // may reach inboard (rail_half below): a 7mm rail would catch the clips and
 // rock the board.
+// Neither the Pi 5 drawing nor the Active Cooler drawing dimensions the
+// push-pin holes or the clip that flares under the board - that is a real gap
+// in the official documentation, so both numbers below are deliberately
+// PESSIMISTIC rather than measured. Note which direction each errs:
+//   fan_lug_d  - a BIGGER flare forces a NARROWER rail, so overstating it is
+//                the safe way to be wrong. Scaling the cooler drawing suggests
+//                ~3.6, i.e. the 6.0 here is generous. Do not shrink it to suit
+//                a wider rail without measuring a real cooler.
+//   fan_lug_below - a DEEPER clip needs more air under the board. Scaling the
+//                same drawing suggests ~3.2, so that is what is used.
 fan_lug_from_hole = 6.0;   // inboard of the corner hole, along board width
 fan_lug_d         = 6.0;   // clip flare diameter under the board     VERIFY
-fan_lug_below     = 2.5;   // clip protrusion below the PCB underside VERIFY
+fan_lug_below     = 3.2;   // clip protrusion below the PCB underside VERIFY
 
 // ---------------------------------------------------------------------------
 // 3. LAYOUT
@@ -216,6 +251,11 @@ gusset_len = 40.0;   // along Z
 gusset_h   = 3.0;    // below the floor
 gusset_t   = 3.0;
 
+// Fillet in the inside corner where the floor top meets the back of the
+// fascia - the cantilever root, and the sharp corner a bending crack would
+// start from. Must stay well clear of the board seating plane above it.
+root_fillet = 2.5;
+
 // rail X centres = the Pi hole lines
 rail_cx = [pi_left_x + pi_hole_from_pwr[0], pi_left_x + pi_hole_from_pwr[1]];
 // hole Z positions (board front edge at Z=3, holes measured from the rear)
@@ -226,6 +266,10 @@ hole_z  = [pi_rear_z - pi_hole_from_rear[0], pi_rear_z - pi_hole_from_rear[1]];
 // ---------------------------------------------------------------------------
 assert($fn >= 32,
        "$fn too coarse for the bores - check the include still sets it");
+assert(panel_h < rack_u,
+       "panel is taller than one rack unit - it will bind on its neighbours");
+assert(ear_slot_cy*2 + ear_slot_h < panel_h,
+       "ear slots run off the top or bottom edge of the panel");
 assert(pi_top_y + cooler_h <= panel_h/2 - 2.0,
        "cooler does not clear the top of the 1U envelope");
 assert(pi_floor_top_y - pi_floor_t >= -panel_h/2 + 1.0,
@@ -304,6 +348,10 @@ assert(rail_h >= hdmi_below_pcb + 1.5,
        "tray floor fouls the HDMI adapter body hanging under the PCB");
 assert(fan_lug_below < rail_h,
        "cooler clips reach below the rail height into the floor");
+assert(root_fillet < rail_h - 1.0,
+       "root fillet reaches up into the board's seating plane");
+assert(root_fillet < pi_l/4,
+       "root fillet runs too far back under the board");
 
 // ============================================================================
 // MODULES  (rounded_rect_prism comes from the included carrier file)
@@ -334,15 +382,14 @@ module fascia() {
             translate([sx*ear_slot_cx, sy*ear_slot_cy, 0]) ear_slot();
 
         // Pi port opening
-        translate([pi_open_cx, pi_open_cy, -0.5])
-            rounded_rect_prism(pi_open_w, pi_open_h, pi_open_r,
-                               0, fascia_t + 1);
+        translate([pi_open_cx, pi_open_cy, 0])
+            bed_relieved_opening(pi_open_w, pi_open_h, pi_open_r, fascia_t);
 
         // RJ45 opening: the carrier's own test-fitted size, aligned with the
         // opening through the carrier flange that sits directly behind
-        translate([ch_cx, ch_cy, -0.5])
-            rounded_rect_prism(carrier_rj45_w, carrier_rj45_h, carrier_rj45_r,
-                               0, fascia_t + 1);
+        translate([ch_cx, ch_cy, 0])
+            bed_relieved_opening(carrier_rj45_w, carrier_rj45_h,
+                                 carrier_rj45_r, fascia_t);
     }
 }
 
@@ -369,6 +416,16 @@ module pi_tray() {
             rotate([90, 0, 90])
             linear_extrude(height = gusset_t)
                 polygon([[0, 0], [-gusset_h, 0], [0, gusset_len]]);
+
+    // Fillet along the inside corner where the floor's top face meets the
+    // back of the fascia. That corner is the cantilever's root and a sharp
+    // internal corner is where a bending crack would start. Runs the full
+    // floor width, well below the board, and grows in +Z like everything
+    // else so it costs nothing to print.
+    translate([pi_floor_x0, pi_floor_top_y, fascia_t])
+        rotate([90, 0, 90])
+        linear_extrude(height = pi_floor_x1 - pi_floor_x0)
+            polygon([[0, 0], [root_fillet, 0], [0, root_fillet]]);
 }
 
 // Insert bores, drilled down into the rail tops from above.

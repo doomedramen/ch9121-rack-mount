@@ -222,7 +222,7 @@ just enters open air behind.
 
 ## 1U panel: Raspberry Pi 5 + carrier
 
-`pi5_ch9121_1u.scad` is a 254 × 44.5 mm 10-inch-rack 1U panel adapted from the
+`pi5_ch9121_1u.scad` is a 254 × 44.0 mm 10-inch-rack 1U panel adapted from the
 reference mounts in `pi_references/`. **The carrier is part of the print**: the
 panel `include`s `ch9121_mount.scad` and unions `ch9121_carrier()` onto the
 back of the fascia, flange face flush with the panel front. The carrier's two
@@ -294,9 +294,26 @@ top sits at Y −7.5, cooler reaches ~+6.2 against a +22.25 panel edge. HDMI
 adapter body reaches ~3 mm below the PCB underside; the tray floor is
 5.9 mm below it.
 
+**Rack geometry.** 10-inch racks are a de-facto convention, not a
+standards-body format, but they reuse EIA-310's vertical geometry: a U is
+1.75 in = **44.45 mm**, split 0.5 / 0.625 / 0.625 in, which is what puts the
+two ear slots 1.25 in = 31.75 mm apart. The panel itself is **44.0 mm**, the
+usual real-world 1U panel height — a panel has to sit *inside* its U, not
+fill it exactly, or it binds on its neighbours. (It was 44.5 mm, i.e. taller
+than the U; `assert(panel_h < rack_u)` now catches that.) Ear slot size and
+the horizontal ±119 mm spacing come from the reference mounts in
+`pi_references/`, not from a published spec — no citable standard for
+10-inch ear holes seems to exist.
+
 **Printing:** fascia face down, same as the carrier — everything grows
 straight back, no supports. Rotate 45° on the bed if the 254 mm width does
 not fit square; the orientation relative to the bed normal is what matters.
+
+Both parts print with their front face on the bed, so that face's first
+layer squashes outward and every opening through it comes out slightly
+under size at the very front. Each such opening has a 0.3 × 0.3 mm 45°
+lead-in on the bed face to absorb it. The relief only ever removes material,
+so it cannot tighten the carrier's test-fitted 16.8 × 14.5 RJ45 opening.
 
 Note what that orientation costs: the tray is a cantilever rooted at the
 fascia, and the build axis runs along its length, so the Pi's weight is
@@ -307,7 +324,14 @@ where the bending is. They are a long shallow taper (3 mm deep over 40 mm,
 ~5.7° off vertical), not 45° knee braces; the taper is what makes them
 print with no support, since every layer going back is smaller than the one
 below. Rib depth is capped by the 1U envelope, not by strength — they set
-the tray's real low-water mark and are asserted against it.
+the tray's real low-water mark and are asserted against it, and at 3 mm they
+sit exactly on the 1 mm clearance the assert allows.
+
+The corner where the floor's top face meets the back of the fascia carries
+a 2.5 mm fillet. That corner *is* the cantilever root, so it is where a
+bending crack would start; a sharp internal corner there is a stress riser
+for free. It grows in +Z like everything else, so it costs nothing to print
+and never reaches the board seating plane 5.9 mm above it.
 
 ```bash
 OS=/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD
@@ -326,3 +350,34 @@ used — the flange is printed into the panel.
 There is also `ch9121_rj45_cutter.stl` — a plain 16.8 × 14.5 × 40 cuboid of
 the test-fitted RJ45 opening, centred on the origin, for subtracting the same
 opening from any other model (`part="cutter"` in `ch9121_mount.scad`).
+
+## Sources
+
+Where the numbers come from, so the next person can re-check them rather than
+re-measure everything:
+
+| What | Source |
+|---|---|
+| Pi 5 board, hole pattern, port overhang | [Official mechanical drawing](https://datasheets.raspberrypi.com/rpi5/raspberry-pi-5-mechanical-drawing.pdf) — 85 × 56 board, 2.7 mm corner holes on a 58 × 49 pattern, ports overhang 3.0 mm. Read 58 as the *hole spacing*, not the board width; it is easy to misread off the drawing. |
+| Active Cooler height | [Official mechanical drawing](https://datasheets.raspberrypi.com/cooling/raspberry-pi-active-cooler-mechanical-drawing.pdf) — 13.7 mm above the PCB. The model budgets 16. |
+| Rack geometry | 10-inch racks are a de-facto convention with no standards-body document, but reuse EIA-310's vertical geometry: 1.75 in U, ear slots 1.25 in apart. |
+
+Two things are **not** in any official document, and the model is deliberately
+pessimistic about both rather than pretending otherwise:
+
+- **The Active Cooler's push-pin holes and the clip that flares under the
+  board.** Neither Raspberry Pi drawing dimensions them. `fan_lug_d = 6.0`
+  overstates the flare on purpose, because a bigger flare forces a *narrower*
+  rail — that is the safe direction to be wrong. Scaling the cooler drawing
+  suggests the real flare is nearer 3.6, so do not shrink this to justify a
+  wider rail without measuring a real cooler. `fan_lug_below = 3.2` errs the
+  other way for the same reason: a deeper clip needs *more* air under the
+  board.
+- **How far a micro-HDMI plug hangs below the PCB.** No Raspberry Pi or
+  connector figure exists. Generic Type-D plug bodies run 2.8–3 mm, which is
+  where `hdmi_below_pcb = 3.0` comes from. Measure your own adapter.
+
+Heat-set insert bores are brand-dependent and every source says to test rather
+than trust a number: M2 lands around 3.2–3.4 mm and M2.5 around 3.5–3.7 mm
+across brands. The model uses the low end of each (3.2 and 3.5). Press a test
+insert into the coupon before committing to a full print.
