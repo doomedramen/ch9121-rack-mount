@@ -91,16 +91,30 @@ pi_port_x1 = 53.0;
 // Measured from the SD (rear) edge and the power/HDMI edge.
 pi_hole_from_rear  = [3.5, 61.5];   // along the board length
 pi_hole_from_pwr   = [3.5, 52.5];   // across the board width
+pi_hole_d          = 2.7;           // the board's own holes, for reference
 
-// M2.5 hardware for the Pi (its holes are 2.7mm - too big for M2 to locate,
-// exactly right for M2.5).
 // micro-HDMI -> HDMI adapter: its body hangs below the PCB once plugged in,
 // and the tray floor has to stay clear of it
 hdmi_below_pcb  = 3.0;   //                                            VERIFY
 
+// M2.5 hardware for the Pi. 2.7 is the close-fit clearance hole for M2.5 -
+// too big for an M2 to locate in, exactly right for this. Note how little
+// slack that is: 0.1mm a side, and all four have to line up at once, so
+// print shrinkage across the 58 x 49 pattern is what will fight you on
+// assembly, not the screw diameter. Start all four before tightening any.
+pi_screw_d      = 2.5;   // M2.5 major diameter, for the clearance assert
 pi_insert_d     = 3.5;   // M2.5 heat-set insert bore                  VERIFY
-pi_insert_depth = 5.0;   // suits a 4-5mm M2.5 insert
+pi_insert_depth = 5.0;   // total bore depth from the rail top
 pi_screw_len    = 6.0;   // M2.5x6, length under the head
+
+// Relief counterbore at the mouth of each insert bore. The inserts press in
+// from ABOVE (the floor is solid underneath, so there is no reaching them
+// from below like the carrier's are), which puts the insert's own top face
+// at the board's seating plane. Left flush, an insert that ends up even
+// slightly proud lifts the Pi onto four rims and it rocks. Sinking the bore
+// mouth by this much gives a proud insert somewhere to go.
+pi_insert_relief_d = 4.0;   // wider than the insert, to clear a flared knurl
+pi_insert_relief_h = 0.3;   // deeper than an insert is likely to sit proud
 
 // Official Active Cooler: 13.7mm above the PCB top face (official mechanical
 // drawing; 16 kept as the clearance budget), fixed by its own two dedicated
@@ -222,10 +236,18 @@ assert(pi_floor_top_y - pi_floor_t - gusset_h >= -panel_h/2 + 1.0,
        "under-floor gussets break out of the bottom of the 1U envelope");
 assert(pi_insert_depth + 1.5 <= rail_h + pi_floor_t,
        "rail + floor too shallow for the insert bore plus margin");
-assert(pi_screw_len - pi_t <= pi_insert_depth,
+// The screw drops pi_screw_len - pi_t below the board's top face, but the
+// first pi_insert_relief_h of that is air in the relief counterbore, so the
+// thread only engages the insert for what is left. The insert itself has the
+// bore minus the relief to sit in.
+assert(pi_screw_len - pi_t - pi_insert_relief_h
+         <= pi_insert_depth - pi_insert_relief_h,
        "Pi screw bottoms out in the insert bore");
-assert(pi_screw_len - pi_t >= 3.0,
+assert(pi_screw_len - pi_t - pi_insert_relief_h >= 3.0,
        "Pi screw barely enters the insert");
+// the board's own holes have to pass the screw in the first place
+assert(pi_screw_d < pi_hole_d,
+       "Pi screw will not pass through the board's mounting holes");
 assert(pi_open_cx - pi_open_w/2 > pi_left_x - 2.0 &&
        pi_open_cx + pi_open_w/2 < pi_left_x + pi_w + 2.0,
        "Pi port opening strays past the board envelope");
@@ -268,7 +290,15 @@ for (p = pi_hole_positions()) {
     assert(p[0] - rail_x0(p[0]) - pi_insert_d/2 >= 0.7 &&
            rail_x1(p[0]) - p[0] - pi_insert_d/2 >= 0.7,
            "insert bore wall too thin - rail is narrower than the bore needs");
+    // the relief is wider than the bore, so IT sets the thinnest wall
+    assert(p[0] - rail_x0(p[0]) - pi_insert_relief_d/2 >= 0.7 &&
+           rail_x1(p[0]) - p[0] - pi_insert_relief_d/2 >= 0.7,
+           "insert relief counterbore leaves too thin a wall at the rail top");
 }
+assert(pi_insert_relief_d > pi_insert_d,
+       "insert relief must be wider than the bore it opens up");
+assert(pi_insert_relief_h < pi_insert_depth,
+       "insert relief would swallow the whole insert bore");
 // the HDMI adapter body hangs below the PCB; the floor must stay under it
 assert(rail_h >= hdmi_below_pcb + 1.5,
        "tray floor fouls the HDMI adapter body hanging under the PCB");
@@ -343,10 +373,15 @@ module pi_tray() {
 
 // Insert bores, drilled down into the rail tops from above.
 module pi_screw_holes() {
-    for (p = pi_hole_positions())
+    for (p = pi_hole_positions()) {
         translate([p[0], rail_top_y + 0.01, p[1]])
             rotate([90, 0, 0])
                 cylinder(d = pi_insert_d, h = pi_insert_depth + 0.01);
+        // relief at the mouth, so a proud insert cannot lift the board
+        translate([p[0], rail_top_y + 0.01, p[1]])
+            rotate([90, 0, 0])
+                cylinder(d = pi_insert_relief_d, h = pi_insert_relief_h + 0.01);
+    }
 }
 
 // The carrier, moved so its RJ45 opening centre lands at (ch_cx, ch_cy) and

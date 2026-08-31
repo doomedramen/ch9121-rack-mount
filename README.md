@@ -266,6 +266,20 @@ it without pointing the ports backwards or the cooler down.*
    wide, so each insert bore sits mid-rail with a 1.0 mm wall all round and
    the iron goes in straight. Asserts guard the clip clearance, the
    insert-bore wall, and the rails being centred.
+
+   Each bore mouth is sunk by a 4.0 × 0.3 mm relief counterbore. These
+   inserts press from *above* — unlike the carrier's, there is no reaching
+   them from below — which puts the insert's own top face right at the
+   board's seating plane, so one left standing proud would lift the Pi onto
+   four rims and let it rock. The relief gives a proud insert somewhere to
+   go. It leaves 0.75 mm of wall at the rail top and costs 0.3 mm of thread
+   engagement (4.1 mm of an M2.5×6 still bites), both asserted.
+
+   On the screws themselves: the Pi's holes are 2.7 mm, the close-fit
+   clearance hole for M2.5, so an M2.5×6 passes with 0.1 mm a side. That is
+   almost no positional slack and all four have to line up at once, so what
+   will fight you on assembly is print shrinkage across the 58 × 49 pattern,
+   not the screw diameter — start all four before tightening any.
 3. **CH9121 station** — the carrier, printed in place, RJ45 centred at X +85.
    Its board inserts still press in from the tray underside, which stays open
    below. The Pi's GPIO edge faces it, so the dupont run to the header is
@@ -302,7 +316,9 @@ $OS --backend=manifold -o pi5_ch9121_1u_coupon.stl -D 'part="coupon"' pi5_ch9121
 ```
 
 Hardware for the whole panel: **4 × M2.5 heat-set inserts (3.5 mm bore —
-VERIFY yours) + 4 × M2.5×6 screws** for the Pi, and **2 × M2 inserts +
+VERIFY yours; press them until they sit at or below the rail top, the
+0.3 mm relief is there to absorb the overshoot) + 4 × M2.5×6 screws** for
+the Pi, and **2 × M2 inserts +
 2 × M2×6** for the CH9121 board (pressed from the tray underside, exactly as
 on the standalone carrier). The carrier's flange inserts and screws are not
 used — the flange is printed into the panel.
