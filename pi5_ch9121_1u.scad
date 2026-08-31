@@ -53,7 +53,8 @@ include <ch9121_mount.scad>
 ch9121_standalone     = false;
 include_flange_screws = false;
 
-$fn = 48;
+// $fn comes from the included carrier file - one source of truth for both
+// parts. Asserted below so a change there can't silently coarsen this panel.
 
 // ---------------------------------------------------------------------------
 // 1. PANEL / RACK  (measured off the reference 10-inch rack mount STL)
@@ -93,6 +94,10 @@ pi_hole_from_pwr   = [3.5, 52.5];   // across the board width
 
 // M2.5 hardware for the Pi (its holes are 2.7mm - too big for M2 to locate,
 // exactly right for M2.5).
+// micro-HDMI -> HDMI adapter: its body hangs below the PCB once plugged in,
+// and the tray floor has to stay clear of it
+hdmi_below_pcb  = 3.0;   //                                            VERIFY
+
 pi_insert_d     = 3.5;   // M2.5 heat-set insert bore                  VERIFY
 pi_insert_depth = 5.0;   // suits a 4-5mm M2.5 insert
 pi_screw_len    = 6.0;   // M2.5x6, length under the head
@@ -154,9 +159,9 @@ ch_cy = pi_open_cy;    // visually level with the Pi opening
 // Two rails run under the Pi's two mounting-hole lines, full board length.
 // The board seats on the rail tops; four M2.5 inserts press in from above
 // (open-top part - the iron comes straight down). A floor plate ties the
-// rails together underneath; the ~7.5mm between floor and board keeps the
+// rails together underneath; the 5.9mm between floor and board keeps the
 // floor clear of the HDMI adapter's body, which reaches ~3mm below the PCB
-// underside when plugged in.
+// underside when plugged in, leaving ~2.9mm to spare (asserted below).
 // Rails are CENTRED on their hole lines - an off-centre bore leaves unequal
 // wall around the insert and the iron drifts toward the thin side going in.
 // Width is set by the inboard limit: the cooler's spring-pin clips flare to
@@ -169,7 +174,7 @@ rail_out      = rail_half;              // outboard reach
 rail_top_y    = pi_bot_y;               // Pi seats here
 pi_floor_top_y = -15.0;
 pi_floor_t     = 3.0;
-rail_h         = rail_top_y - pi_floor_top_y;   // = 7.5
+rail_h         = rail_top_y - pi_floor_top_y;   // = 5.9
 
 pi_front_z  = fascia_t;                 // board front edge butts the fascia
 pi_rear_z   = pi_front_z + pi_l;        // = 88
@@ -177,12 +182,24 @@ rail_end_z  = pi_rear_z;                // rails run the full board length
 pi_floor_end_z = pi_rear_z + 2.0;       // floor overruns slightly
 pi_floor_x0 = pi_left_x - 5.0;          // floor extends a little past the
                                         // board on both sides
-pi_floor_x1 = pi_left_x + pi_w + 3.0;   // (tighter on the GPIO side - the
+pi_floor_x1 = pi_left_x + pi_w + 2.0;   // (tighter on the GPIO side - the
                                         //  ch9121 flange starts at X=67)
 
-// under-floor gussets bracing the tray back to the fascia
+// Two printed faces can each come out ~0.2-0.4 proud, so any nominal gap
+// between separately-grown solids needs to survive ~0.8 of closing before
+// they touch. Used by the tray-floor / carrier-flange assert below.
+print_gap_min = 1.5;
+
+// Under-floor stiffening ribs, rooted in the fascia and tapering out along
+// the tray's underside. They deepen the floor's section over the cantilever
+// root, where the Pi's weight puts the most bending into it. NOT 45-degree
+// knee braces - the profile is a long shallow taper (gusset_h over
+// gusset_len, ~5.7 degrees off vertical), which is what lets it print with
+// no support: every layer going up in +Z is smaller than the one below it,
+// so the rib recedes rather than overhangs.
+// Depth is capped by the 1U envelope, not by strength - see the assert.
 gusset_len = 40.0;   // along Z
-gusset_h   = 4.0;    // below the floor
+gusset_h   = 3.0;    // below the floor
 gusset_t   = 3.0;
 
 // rail X centres = the Pi hole lines
@@ -193,10 +210,16 @@ hole_z  = [pi_rear_z - pi_hole_from_rear[0], pi_rear_z - pi_hole_from_rear[1]];
 // ---------------------------------------------------------------------------
 // 5. SANITY CHECKS
 // ---------------------------------------------------------------------------
+assert($fn >= 32,
+       "$fn too coarse for the bores - check the include still sets it");
 assert(pi_top_y + cooler_h <= panel_h/2 - 2.0,
        "cooler does not clear the top of the 1U envelope");
 assert(pi_floor_top_y - pi_floor_t >= -panel_h/2 + 1.0,
        "tray floor breaks out of the bottom of the 1U envelope");
+// the gussets hang below the floor, so they - not the floor - set the tray's
+// real low-water mark
+assert(pi_floor_top_y - pi_floor_t - gusset_h >= -panel_h/2 + 1.0,
+       "under-floor gussets break out of the bottom of the 1U envelope");
 assert(pi_insert_depth + 1.5 <= rail_h + pi_floor_t,
        "rail + floor too shallow for the insert bore plus margin");
 assert(pi_screw_len - pi_t <= pi_insert_depth,
@@ -222,8 +245,8 @@ assert(ch_cy - rj45_cy + tray_bot_y > -panel_h/2 + 1.0,
 // a dupont housing stands ~14mm above the board it plugs into
 assert(ch_cy - rj45_cy + pcb_top_y + 14.0 < panel_h/2,
        "dupont housings on the ch9121 header crowd the top of the 1U envelope");
-assert(ch_cx - flange_w/2 > pi_floor_x1,
-       "Pi tray floor runs under the ch9121 flange");
+assert(ch_cx - flange_w/2 - pi_floor_x1 >= print_gap_min,
+       "Pi tray floor crowds the ch9121 flange - gap is inside print tolerance");
 assert(ear_slot_cx + ear_slot_w/2 < panel_w/2 - 1.0,
        "ear slots break out of the panel");
 assert(rail_cx[0] - rail_out >= pi_floor_x0 &&
@@ -235,10 +258,20 @@ assert(pi_floor_end_z >= rail_end_z,
 // insert bore must keep a wall on the inboard side
 assert(rail_in <= fan_lug_from_hole - fan_lug_d/2,
        "rail inboard face catches the cooler's under-board clips");
-assert(rail_in - pi_insert_d/2 >= 0.7,
-       "insert bore wall too thin on the rail's inboard side");
-assert(rail_in == rail_out,
-       "rail not centred on its hole line - insert bore would sit off-centre");
+// Every insert bore must sit centred in the rail the tray actually emits,
+// with wall to spare on both sides. Checked against rail_x0()/rail_x1() -
+// the same functions pi_tray() builds the rails from - so this catches a
+// rail that drifts off its hole line, not just a typo in one constant.
+for (p = pi_hole_positions()) {
+    assert(abs((p[0] - rail_x0(p[0])) - (rail_x1(p[0]) - p[0])) < 1e-9,
+           "insert bore sits off-centre in its rail");
+    assert(p[0] - rail_x0(p[0]) - pi_insert_d/2 >= 0.7 &&
+           rail_x1(p[0]) - p[0] - pi_insert_d/2 >= 0.7,
+           "insert bore wall too thin - rail is narrower than the bore needs");
+}
+// the HDMI adapter body hangs below the PCB; the floor must stay under it
+assert(rail_h >= hdmi_below_pcb + 1.5,
+       "tray floor fouls the HDMI adapter body hanging under the PCB");
 assert(fan_lug_below < rail_h,
        "cooler clips reach below the rail height into the floor");
 
@@ -256,6 +289,11 @@ module ear_slot() {
 
 function pi_hole_positions() =    // [x, z] pairs, all four
     [for (x = rail_cx, z = hole_z) [x, z]];
+
+// The X extent of the rail carrying the hole line at cx. Single source of
+// truth: pi_tray() builds from these and the sanity checks verify them.
+function rail_x0(cx) = cx - rail_out;
+function rail_x1(cx) = cx + rail_in;
 
 module fascia() {
     difference() {
@@ -288,13 +326,14 @@ module pi_tray() {
     // rails, centred on their hole lines so each insert bore sits in the
     // middle of the rail; width is capped by the cooler's under-board clips
     for (x = rail_cx)
-        translate([x - rail_half, pi_floor_top_y, fascia_t])
-            cube([2*rail_half, rail_h, rail_end_z - fascia_t]);
+        translate([rail_x0(x), pi_floor_top_y, fascia_t])
+            cube([rail_x1(x) - rail_x0(x), rail_h, rail_end_z - fascia_t]);
 
-    // under-floor gussets tying the tray back to the fascia. Right-angle
-    // triangles in the YZ plane - the hypotenuse prints at 45 degrees.
-    // rotate([90,0,90]) maps polygon (a,b) -> (Y,Z): legs 4mm down the
-    // fascia and 40mm back along the floor's underside.
+    // under-floor stiffening ribs tying the tray back to the fascia.
+    // Right-angle triangles in the YZ plane: rotate([90,0,90]) maps polygon
+    // (a,b) -> (Y,Z), giving legs gusset_h down the fascia and gusset_len
+    // back along the floor's underside. The hypotenuse is a shallow taper,
+    // not a 45-degree chamfer - see the gusset notes in section 4.
     for (x = [pi_floor_x0, pi_floor_x1 - gusset_t])
         translate([x, pi_floor_top_y - pi_floor_t, fascia_t])
             rotate([90, 0, 90])

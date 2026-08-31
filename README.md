@@ -16,6 +16,7 @@ dupont jumpers.
 | `ch9121_coupon.stl` | **Print this first.** The front 14 mm of the part only — a few minutes on the bed. Checks that the board's screw holes and the magjack line up, and lets you test-press an insert before committing. |
 | `ch9121_fascia_stencil.stl` | 2 mm flat plate for marking the fascia: flange outline, the 17.6 × 15.3 opening, and the two M2 holes. Hold it on the panel, mark or drill through, cut the opening to the line. Symmetric both ways so it can't go on backwards. |
 | `renders/` | `iso.png` (into the tray), `fit.png` (module shown as reference geometry), `flange.png` (front elevation), `underside.png` (insert bores), `stencil.png`. |
+| `render.sh` | Regenerates every STL and every PNG in `renders/` from the two sources. Run it after editing either. |
 
 ## Design
 
@@ -125,11 +126,26 @@ back out to ~1.5 and re-print the coupon before committing to a full part.
 | Variable | Default | What to check |
 |---|---|---|
 | `pcb_insert_d` / `flange_insert_d` | 3.2 | Both are M2. 3.2 suits the common M2×4.0 insert with a 3.2 mm OD, but some M2 inserts want 3.5 — check yours before pressing. |
-| `rib_inner_x` | 7.8 | Must clear the magjack's underside pegs (photos put them around ±6.5). |
+| `rib_inner_x` | 9.6 | Must clear the magjack's underside pegs (photos put them around ±6.5) and the header pins at ±8.89. |
 
 Everything else is measured. If a number turns out wrong, it's one variable at
 the top of the `.scad` — change it, re-run, and the asserts will tell you if
 the change broke something else.
+
+Three of those asserts currently pass by less than a print's worth of error,
+so a clean render is weaker evidence than it looks — check them with calipers
+on the coupon rather than trusting the model:
+
+| Assert | Required | Actual | Slack |
+|---|---|---|---|
+| seating band wide enough to hold the board flat | 3.0 | 3.1 | 0.1 |
+| ribs clear of the header pins | 9.39 | 9.6 | 0.21 |
+| standoffs clear the RJ45's underside posts | 0.5 | 0.6 | 0.1 |
+
+They are this tight because `rib_inner_x` is squeezed from both sides — the
+header pins push it outboard, the seating band pulls it inboard — and it is
+the one dimension in the table above that is still unverified. Confirm the
+magjack and header spans on a real board before widening either bound.
 
 ## Printing
 
@@ -161,6 +177,11 @@ $OS --backend=manifold -o ch9121_fascia_stencil.stl -D 'part="stencil"' ch9121_m
 
 `show_reference = true` adds translucent PCB / magjack / header stand-ins for a
 visual fit check. Leave it `false` when exporting.
+
+`./render.sh` regenerates every STL and every PNG in `renders/` in one go,
+with the camera angles and colour schemes the committed images use. Run it
+after any change to either source so the checked-in artefacts don't drift
+from the code.
 
 ## Hardware
 
@@ -262,6 +283,17 @@ adapter body reaches ~3 mm below the PCB underside; the tray floor is
 **Printing:** fascia face down, same as the carrier — everything grows
 straight back, no supports. Rotate 45° on the bed if the 254 mm width does
 not fit square; the orientation relative to the bed normal is what matters.
+
+Note what that orientation costs: the tray is a cantilever rooted at the
+fascia, and the build axis runs along its length, so the Pi's weight is
+carried across layer interfaces rather than in-plane. Static load is not
+the worry — levering on a plugged-in cable is. Two stiffening ribs run
+under the floor at its outer edges, deepening the section over the root
+where the bending is. They are a long shallow taper (3 mm deep over 40 mm,
+~5.7° off vertical), not 45° knee braces; the taper is what makes them
+print with no support, since every layer going back is smaller than the one
+below. Rib depth is capped by the 1U envelope, not by strength — they set
+the tray's real low-water mark and are asserted against it.
 
 ```bash
 OS=/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD

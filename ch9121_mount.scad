@@ -26,6 +26,11 @@
 
 $fn = 48;
 
+// Overlap for difference() cutters. Only ever used to push a cut face off a
+// coincident plane so it does not z-fight; far below one layer height, so it
+// never removes material that matters.
+eps = 0.01;
+
 // ---------------------------------------------------------------------------
 // 1. THE MODULE  (measured off the seller dimension drawing: 43.00 x 25.50mm)
 // ---------------------------------------------------------------------------
@@ -164,6 +169,11 @@ flange_insert_d       = 3.2;   // M2 heat-set insert bore                VERIFY
 flange_insert_depth   = 4.0;   // suits a 4.0mm-long M2 insert
 flange_screw_d        = 2.4;   // M2 clearance - relief behind the insert for
                                 // screw overrun
+// Fins bracing the tray side walls back against the flange. Equal legs, so
+// the hypotenuse is a true 45-degree chamfer in the print orientation.
+flange_fin_leg        = 5.0;   // reach along the wall and down the flange
+flange_fin_t          = 2.0;   // fin thickness, standing off the outer wall
+
 flange_boss_w         = 6.5;   // rear-face boss, gives the insert its depth
 flange_boss_h         = 2.5;   // without thickening the whole flange
 
@@ -195,8 +205,13 @@ tray_bot_y  = -floor_t;
 // --- sanity checks (these fail the render loudly rather than printing junk) --
 assert(front_t < rj45_overhang,
        "front_t must be less than rj45_overhang or the RJ45 cannot reach the panel");
-assert(pcb_front_z == front_t,
-       "the PCB seats against the back of the flange slab - pcb_front_z must equal front_t");
+// pcb_front_z IS front_t by construction (assigned above), so there is
+// nothing to assert about that. What is worth guarding is the consequence
+// the comment warns about: every screw position is measured from the seated
+// front face, so a bad pcb_hole_dz walks the bores off the board entirely.
+assert(pcb_hole_dz - pcb_insert_d/2 >= 0 &&
+       pcb_hole_dz + pcb_insert_d/2 <= pcb_l,
+       "board insert bores fall outside the PCB's own length");
 assert(standoff_h >= underside_clear + 0.5,
        "standoff_h too low: the RJ45's underside posts will hold the PCB up");
 assert(pcb_insert_d > pcb_hole_d,
@@ -216,8 +231,17 @@ assert(rj45_cy - flange_boss_w/2 >= side_wall_h + 0.5,
        "flange insert boss nearly touches the tray side wall - leaves a sliver gap");
 assert(flange_y0 <= tray_bot_y,
        "flange does not reach down far enough to back up the tray floor");
-assert(cavity_w/2 + wall_t + 2.0 <= flange_w/2,
+assert(cavity_w/2 + wall_t + flange_fin_t <= flange_w/2,
        "gusset fins would stick out past the flange edge");
+assert(flange_hole_spacing_x/2 + flange_boss_w/2 <= flange_w/2 - 0.5,
+       "flange insert boss runs off the side edge of the flange");
+// M2 throughout - one insert size, one driver. The board and flange bores
+// are declared separately so they can be measured separately, but a real
+// build uses one batch of inserts, so they must not drift apart.
+assert(pcb_insert_d == flange_insert_d &&
+       pcb_insert_depth == flange_insert_depth &&
+       pcb_screw_d == flange_screw_d,
+       "board and flange M2 hardware have diverged - pick one insert size");
 assert(pcb_hole_dx - pcb_insert_d/2 - boss_inner_x >= 0.5,
        "not enough pad material inboard of the PCB insert bore");
 assert(2*rib_inner_x >= magjack_underside_span + 1.0,
@@ -329,9 +353,13 @@ module pcb_rails() {
                           pad_end_z - front_t]);
         }
 
-        // clear the ribs away under the header. Kept inboard of the side
-        // walls so it only removes rib, not wall.
-        translate([-cavity_w/2, 0.4, pcb_rear_z - rear_rib_relief])
+        // Clear the ribs away under the header, right down to the floor, so
+        // nothing is left standing proud for a dupont housing to catch on.
+        // Kept inboard of the side walls so it only removes rib, not wall.
+        // The cut starts eps BELOW the floor's top face rather than exactly
+        // on it: a coplanar cut face renders as z-fighting speckle, and eps
+        // is far under one layer so the floor loses nothing real.
+        translate([-cavity_w/2, -eps, pcb_rear_z - rear_rib_relief])
             cube([cavity_w, rib_h, rear_rib_relief + 1]);
 
     }
@@ -340,14 +368,13 @@ module pcb_rails() {
 // Fins bracing the side walls back against the flange, on the OUTER wall face
 // so they actually add section rather than sitting inside the wall.
 module gussets() {
-    g = 5.0;
-    t = 2.0;
     for (s = [-1, 1])
-        translate([s > 0 ? cavity_w/2 + wall_t : -(cavity_w/2 + wall_t + t),
+        translate([s > 0 ? cavity_w/2 + wall_t
+                         : -(cavity_w/2 + wall_t + flange_fin_t),
                    0, front_t])
         rotate([90, 0, 90])
-        linear_extrude(height = t)
-            polygon([[0, 0], [g, 0], [0, g]]);
+        linear_extrude(height = flange_fin_t)
+            polygon([[0, 0], [flange_fin_leg, 0], [0, flange_fin_leg]]);
 }
 
 // Board screw holes: the heat-set insert bore, opening at the UNDERSIDE of
